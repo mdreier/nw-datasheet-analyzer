@@ -91,7 +91,7 @@ export class LootParser {
                     continue;
                 }
                 lootBuckets.push({
-                    Name: row["Name" + itemIndex],
+                    Name: row["LootBucket" + itemIndex],
                     MatchOne: this.#parseBoolean(row["MatchOne" + itemIndex]),
                     Item: row["Item" + itemIndex],
                     Quantity: row["Quantity" + itemIndex],
