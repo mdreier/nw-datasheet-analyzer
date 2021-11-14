@@ -16,8 +16,8 @@ interface LootTable {
     HighWaterMarkMultiplier: number,
     GearScoreBonus: number,
     MaxRoll: number,
-    Items: LootTableItem[]
-    UseLevelGearScore: boolean
+    Items: LootTableItem[],
+    UseLevelGearScore: boolean,
     Conditions?: string,
     LuckSafe: boolean
 }
