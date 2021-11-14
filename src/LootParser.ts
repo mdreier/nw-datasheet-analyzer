@@ -33,6 +33,12 @@ const Suffixes = {
 
 export class LootParser {
 
+    /**
+     * Parse a loot table file.
+     * 
+     * @param lootTablesFile Path to the loot table file.
+     * @returns Loot tables contained in the file.
+     */
     parseLootTables(lootTablesFile: string): LootTable[] {
         //Load the JSON source file
         console.debug("Loading loot table");
@@ -58,6 +64,12 @@ export class LootParser {
         return Object.values(loadedTables);
     }
 
+    /**
+     * Load and parse a loot bucket file.
+     * 
+     * @param bucketFile Path to the loot bucket file.
+     * @returns Loot buckets in the file.
+     */
     parseLootBuckets(bucketFile: string): LootBucket[] {
         console.debug("Loading loot bucket");
         let rawContent = JSON.parse(readFileSync(bucketFile, {encoding: 'utf-8'})) as RawLootBucketRow[];
@@ -92,10 +104,30 @@ export class LootParser {
         return lootBuckets;
     }
 
+    /**
+     * Remove the suffix of a loot table to get the base name.
+     * 
+     * Loot tables are split into three entries:
+     * - XXX
+     * - XXX_Qty
+     * - XXX_Probs
+     * 
+     * This function removes the suffix to get the base name.
+     * 
+     * @param lootTableName Full name of the loot table entry.
+     * @param suffix The suffix to remove.
+     * @returns Base name of the loot table entry.
+     */
     #removeSuffix(lootTableName: string, suffix: string): string {
         return lootTableName.substr(0, lootTableName.length - suffix.length);
     }
 
+    /**
+     * Amends the main entry for a loot table with data from the quantity entry.
+     * 
+     * @param mainEntry Reference to the main entry.
+     * @param quantityEntry Quantity entry
+     */
     #parseQuantityEntry(mainEntry: LootTable, quantityEntry: RawLootTableEntry) {
         if (!mainEntry) {
             console.warn(`Main table for loot table ${quantityEntry.LootTableID} not found`);
@@ -108,6 +140,12 @@ export class LootParser {
         }
     }
 
+    /**
+     * Amends the main entry for a loot table with data from the probability entry.
+     * 
+     * @param mainEntry Reference to the main entry.
+     * @param probabilityEntry Probability entry
+     */
     #parseProbabilityEntry(mainEntry: LootTable, probabilityEntry: RawLootTableEntry) {
         if (!mainEntry) {
             console.warn(`Main table for loot table ${probabilityEntry.LootTableID} not found`);
@@ -122,6 +160,12 @@ export class LootParser {
         }
     }
 
+    /**
+     * Parse the main entry for a loot table.
+     * 
+     * @param rawEntry Raw entry data.
+     * @returns Parsed entry.
+     */
     #parseMainEntry(rawEntry: RawLootTableEntry): LootTable {
         var table = {
             LootTableID: rawEntry.LootTableID,
@@ -148,6 +192,13 @@ export class LootParser {
         return table;
     }
 
+    /**
+     * Booleans are stored as strings. Values are "TRUE" and "FALSE".
+     * Undefined and invalid values result in false.
+     * 
+     * @param rawValue The string value.
+     * @returns The boolean value. 
+     */
     #parseBoolean(rawValue: string): boolean {
         if (rawValue === "TRUE") {
             return true;
