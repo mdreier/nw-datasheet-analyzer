@@ -18,11 +18,21 @@ interface LootTable {
     MaxRoll: number,
     Items: LootTableItem[]
     UseLevelGearScore: boolean
-    Conditions?: string
+    Conditions?: string,
+    LuckSafe: boolean
 }
 
 interface Loot {
-    lootTables: LootTable[]
+    lootTables: LootTable[],
+    lootBuckets: LootBucket[]
 }
 
-export {Loot, LootTable, LootTableItem, NumberRange};
+interface LootBucket {
+    Name: string,
+    Tags: string,
+    MatchOne: boolean,
+    Item: string,
+    Quantity: number
+}
+
+export {Loot, LootTable, LootTableItem, NumberRange, LootBucket};

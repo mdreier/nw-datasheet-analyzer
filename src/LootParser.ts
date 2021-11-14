@@ -1,6 +1,11 @@
 import { readFileSync } from "fs";
 import { basename } from "path";
-import { LootTable, NumberRange } from "./Loot";
+import { LootBucket, LootTable, NumberRange } from "./Loot";
+
+/**
+ * Number of items in a row.
+ */
+const ROW_ITEMS_BOUND = 152;
 
 interface RawLootTableEntry {
     LootTableID: string,
@@ -10,6 +15,11 @@ interface RawLootTableEntry {
     MaxRoll: number,
     Conditions?: string,
     [itemKey: string]: any
+}
+
+interface RawLootBucketRow {
+    RowPlaceholders: string,
+    [entryKey: string]: any
 }
 
 interface LootTables {
@@ -48,6 +58,40 @@ export class LootParser {
         return Object.values(loadedTables);
     }
 
+    parseLootBuckets(bucketFile: string): LootBucket[] {
+        console.debug("Loading loot bucket");
+        let rawContent = JSON.parse(readFileSync(bucketFile, {encoding: 'utf-8'})) as RawLootBucketRow[];
+        console.debug(`Loaded ${rawContent.length} databse rows in loot bucket ${basename(bucketFile)}`);
+
+        let lootBuckets = [] as LootBucket[];
+        for (let row of rawContent) {
+            let itemIndex = 0;
+            while (row["Quantity" + ++itemIndex]) {
+                if (itemIndex > ROW_ITEMS_BOUND) {
+                    //Seems to be the maximum index currently
+                    console.warn("Detected bounds violation, did data file structure change?");
+                    //Terminate loop to prevent endless loop
+                    break;
+                }
+
+                if (row["Quantity" + itemIndex] === 0) {
+                    //Empty row
+                    continue;
+                }
+                lootBuckets.push({
+                    Name: row["Name" + itemIndex],
+                    MatchOne: this.#parseBoolean(row["MatchOne" + itemIndex]),
+                    Item: row["Item" + itemIndex],
+                    Quantity: row["Quantity" + itemIndex],
+                    Tags: row["Tags" + itemIndex] 
+                });
+            }
+        }
+
+        console.debug(`Parsed ${lootBuckets.length} loot buckets`);
+        return lootBuckets;
+    }
+
     #removeSuffix(lootTableName: string, suffix: string): string {
         return lootTableName.substr(0, lootTableName.length - suffix.length);
     }
@@ -84,8 +128,9 @@ export class LootParser {
             AndOr: rawEntry["AND/OR"],
             Conditions: rawEntry.Conditions,
             HighWaterMarkMultiplier: rawEntry.HWMMult,
-            UseLevelGearScore: rawEntry.UseLevelGS,
+            UseLevelGearScore: this.#parseBoolean(rawEntry.UseLevelGS),
             GearScoreBonus: rawEntry.GSBonus,
+            LuckSafe: this.#parseBoolean(rawEntry.LuckSafe),
             Items: []
         } as LootTable;
 
@@ -101,6 +146,14 @@ export class LootParser {
         }
 
         return table;
+    }
+
+    #parseBoolean(rawValue: string): boolean {
+        if (rawValue === "TRUE") {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     /**

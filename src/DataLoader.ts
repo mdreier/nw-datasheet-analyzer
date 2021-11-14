@@ -11,8 +11,9 @@ const DATA_FILES_DIRECTORY = "./data/";
 /**
  * Data files needed by the application.
  */
-const DATA_FILES = {
-    LOOT_TABLES: "javelindata_loottables.json"
+const DataFiles = {
+    LootTables: "javelindata_loottables.json",
+    LootBuckets: "javelindata_lootbuckets.json"
 };
 /**
  * Source repository.
@@ -32,7 +33,8 @@ export class DataLoader {
         let parser = new LootParser();
         
         return {
-            lootTables: parser.parseLootTables(DATA_FILES_DIRECTORY + DATA_FILES.LOOT_TABLES)
+            lootTables: parser.parseLootTables(DATA_FILES_DIRECTORY + DataFiles.LootTables),
+            lootBuckets: parser.parseLootBuckets(DATA_FILES_DIRECTORY + DataFiles.LootBuckets)
         }
     }
 
@@ -42,15 +44,17 @@ export class DataLoader {
      * @returns Completes when files are downloaded.
      */
     async download() {
+        console.debug("Loading data files");
         await fs.mkdir(DATA_FILES_DIRECTORY, {recursive: true});
         let downloads = [];
-        for(let file in DATA_FILES) {
+        for(let file in DataFiles) {
             downloads.push(
-                fetch(REPOSITORY + DATA_FILES[file])
+                fetch(REPOSITORY + DataFiles[file])
                     .then(response => response.text())
-                    .then(text => fs.writeFile(DATA_FILES_DIRECTORY + DATA_FILES[file], text))
+                    .then(text => fs.writeFile(DATA_FILES_DIRECTORY + DataFiles[file], text))
             );
         }
+        console.debug(`${downloads.length} data files queued for download`);
         return Promise.all(downloads);
     }
 
@@ -59,8 +63,8 @@ export class DataLoader {
      * @returns true if all data files are present, false if one or more file are missing.
      */
     dataFilesExist(): boolean {
-        for(let file in DATA_FILES) {
-            if (!existsSync(DATA_FILES + DATA_FILES[file])) {
+        for(let file in DataFiles) {
+            if (!existsSync(DataFiles + DataFiles[file])) {
                 return false;
             }
             return true;
