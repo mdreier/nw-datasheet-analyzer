@@ -1,4 +1,4 @@
-import { AnalyzedLootTable, Loot, LootBucket, LootTable, NumberRange } from "./Loot";
+import { AnalyzedLootItem, AnalyzedLootTable, Loot, LootBucket, LootTable, LootTableItem, NumberRange } from "./Loot";
 
 interface LootTableLookup {
     [lootTableId: string]: LootTable;
@@ -91,57 +91,54 @@ export class Analyzer {
             analyzedTables.push(table);
 
             for (let item of lootTable.Items) {
-                //Calculate base item probabilities
-                let itemProbability = this.#calculateItemProbability(lootTable.MaxRoll, item.Probability);
-
-                //Resolve possible cross references
-                let crossReferenceResolved = false;
-                if (item.Name.startsWith(CrossRefereceTags.LootTable)) {
-                    let referencedTable = this.#lootTables[item.Name.substring(CrossRefereceTags.LootTable.length)];
-                    if (!referencedTable) {
-                        console.warn(`Loot table ${lootTable.LootTableID} has unknown reference ${item.Name}`);
-                    } else {
-                        for (let referencedItem of referencedTable.Items) {
-                            table.Items.push({
-                                Name: referencedItem.Name,
-                                Probability: itemProbability * this.#calculateItemProbability(referencedTable.MaxRoll, referencedItem.Probability),
-                                Quantity: this.#multiplyRange(item.Quantity, referencedItem.Quantity),
-                                GearScore: referencedItem.GearScore,
-                                PerkBucketOverrides: referencedItem.PerkBucketOverrides,
-                                PerkOverrides: referencedItem.PerkOverrides
-                            })
-                        }
-                        crossReferenceResolved = true;
-                    }
-                } else if (item.Name.startsWith(CrossRefereceTags.LootBucket)) {
-                    let referencedBucket = this.#lootBuckets[item.Name.substring(CrossRefereceTags.LootBucket.length)];
-                    if (!referencedBucket) {
-                        console.warn(`Loot table ${lootTable.LootTableID} has unknown reference ${item.Name}`);
-                    } else {
-                        table.Items.push({
-                            Name: referencedBucket.Item,
-                            Probability: itemProbability,
-                            Quantity: this.#multiplyRange(item.Quantity, referencedBucket.Quantity),
-                            GearScore: item.GearScore
-                        });
-                        crossReferenceResolved = true;
-                    }
-                }
-
-                if (!crossReferenceResolved) {
-                    //Normal item or invalid reference
-                    table.Items.push({
-                        Name: item.Name,
-                        Probability: itemProbability,
-                        Quantity: item.Quantity,
-                        GearScore: item.GearScore,
-                        PerkBucketOverrides: item.PerkBucketOverrides,
-                        PerkOverrides: item.PerkOverrides
-                    });
-                }
+                this.#dereferenceItem(table.Items, item, lootTable, 1, 1);
             }
         }
         return analyzedTables;
+    }
+
+    #dereferenceItem(items: AnalyzedLootItem[], item: LootTableItem, lootTable: LootTable, baseQuantity: NumberRange | number, baseProbability: number) {
+        //Calculate base item probabilities
+        let itemProbability = baseProbability * this.#calculateItemProbability(lootTable.MaxRoll, item.Probability);
+        let itemQuantity = this.#multiplyRange(item.Quantity, baseQuantity);
+        //Resolve possible cross references
+        let crossReferenceResolved = false;
+        if (item.Name.startsWith(CrossRefereceTags.LootTable)) {
+            let referencedTable = this.#lootTables[item.Name.substring(CrossRefereceTags.LootTable.length)];
+            if (!referencedTable) {
+                console.warn(`Loot table ${lootTable.LootTableID} has unknown reference ${item.Name}`);
+            } else {
+                for (let referencedItem of referencedTable.Items) {
+                    this.#dereferenceItem(items, referencedItem, referencedTable, itemQuantity, itemProbability);
+                }
+                crossReferenceResolved = true;
+            }
+        } else if (item.Name.startsWith(CrossRefereceTags.LootBucket)) {
+            let referencedBucket = this.#lootBuckets[item.Name.substring(CrossRefereceTags.LootBucket.length)];
+            if (!referencedBucket) {
+                console.warn(`Loot table ${lootTable.LootTableID} has unknown reference ${item.Name}`);
+            } else {
+                items.push({
+                    Name: referencedBucket.Item,
+                    Probability: itemProbability,
+                    Quantity: this.#multiplyRange(item.Quantity, referencedBucket.Quantity),
+                    GearScore: item.GearScore
+                });
+                crossReferenceResolved = true;
+            }
+        }
+
+        if (!crossReferenceResolved) {
+            //Normal item or invalid reference
+            items.push({
+                Name: item.Name,
+                Probability: itemProbability,
+                Quantity: item.Quantity,
+                GearScore: item.GearScore,
+                PerkBucketOverrides: item.PerkBucketOverrides,
+                PerkOverrides: item.PerkOverrides
+            });
+        }
     }
 
     /**
