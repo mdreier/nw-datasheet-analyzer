@@ -6,10 +6,11 @@
   "types": "dist/types/index.d.ts",
   "type": "module",
   "bin": {
-    "anaylze-nw-data-files": "./dist/bin/nwAnalyzer.ts"
+    "analyze-nw-data-files": "dist/bin/nwAnalyzer.js"
   },
   "scripts": {
-    "start": "node --loader ts-node/esm index.ts",
+    "start": "node --loader ts-node/esm src/bin/nwAnalyzer.ts",
+    "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Martin Dreier",

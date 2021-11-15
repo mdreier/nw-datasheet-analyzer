@@ -1,6 +1,6 @@
-import { Analyzer } from "./Analyzer";
-import { DataLoader } from "./DataLoader";
-import { Formatter } from "./Formatter";
+import { Analyzer } from "./Analyzer.js";
+import { DataLoader } from "./DataLoader.js";
+import { Formatter } from "./Formatter.js";
 
 export {
     DataLoader,

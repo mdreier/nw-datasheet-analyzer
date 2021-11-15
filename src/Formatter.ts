@@ -4,7 +4,7 @@ import { readFileSync } from "fs";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
 
-const TEMPLATE_DIR = dirname(fileURLToPath(import.meta.url)) + "/templates/";
+const TEMPLATE_DIR = dirname(fileURLToPath(import.meta.url)) + "/../templates/";
 
 Handlebars.registerHelper("range", function(range: NumberRange): string {
     if (!range) {
