@@ -4,6 +4,9 @@
   "description": "",
   "main": "index.ts",
   "type": "module",
+  "bin": {
+    "anaylze-nw-data-files": "./src/bin/nwAnalyzer.ts"
+  },
   "scripts": {
     "start": "node --loader ts-node/esm index.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
