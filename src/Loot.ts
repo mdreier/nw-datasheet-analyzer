@@ -38,7 +38,7 @@ interface LootBucket {
 }
 
 interface AnalyzedLootItem {
-    Name: String,
+    Name: string,
     GearScore?: NumberRange,
     Quantity: NumberRange,
     Probability: number,
