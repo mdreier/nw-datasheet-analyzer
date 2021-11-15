@@ -30,7 +30,7 @@ let dataTables = loader.parse();
 
 If you already have the data sheets available locally (e.g. because you parsed the game yourself), you can point the data loader to the folder containing the sheets and use them directly. If you want to use a different table that is shared online, you can point the data loader at the download URL. Note that the file names and folder layout must match the output of the [Data Sheet Reader](https://github.com/Kattoor/nw-datasheet-reader).
 
-The resulting data is still in a raw format and not interpreted in any way, except for the restructuring of the contents. Check out the API docs for details on the data format.
+The resulting data is still in a raw format and not interpreted in any way, except for the restructuring of the contents. Check out the [API documentation](docs/api/index.html) for details on the data format.
 
 ### Analyze the data files
 
@@ -43,7 +43,7 @@ let analyzer = new Analyzer(dataTables);
 let analyzedTables = analyzer.analyze();
 ```
 
-The analyzed tables resolve all cross-references and normalizes probability. The probability will now be in a range between 0 (impossible) and 1 (100%, guaranteed). Again, check the API documentation for more information.
+The analyzed tables resolve all cross-references and normalizes probability. The probability will now be in a range between 0 (impossible) and 1 (100%, guaranteed). Again, check the [API documentation](docs/api/index.html) for more information.
 
 ### Output
 

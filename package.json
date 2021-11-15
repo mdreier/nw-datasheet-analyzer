@@ -10,7 +10,7 @@
   },
   "scripts": {
     "start": "node --loader ts-node/esm src/bin/nwAnalyzer.ts",
-    "build": "tsc",
+    "build": "tsc && typedoc",
     "test": "echo \"Error: no test specified\" && exit 1",
     "prepublish": "build"
   },
@@ -20,6 +20,7 @@
     "@types/node": "^16.11.7",
     "ts": "^0.2.2",
     "ts-node": "^10.4.0",
+    "typedoc": "^0.22.9",
     "typescript": "^4.4.4"
   },
   "dependencies": {
