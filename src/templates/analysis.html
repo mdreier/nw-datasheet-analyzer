@@ -1,0 +1,48 @@
+<html>
+    <head>
+        <title>New World Data File Analysis</title>
+    </head>
+    <body>
+        <h1>Analysis of Loot Tables</h1>
+
+        {{#each lootTables}}
+            <h2>{{Id}}</h2>
+            <p>
+                <strong>Luck Safe:</strong> {{LuckSafe}}<br />
+                <strong>Conditions</strong> {{Conditions}}<br />
+                <strong>High Water Mark Multiplier</strong> {{HighWaterMarkMultiplier}}<br />
+                <strong>Use Level Gear Score</strong> {{UseLevelGearScore}}<br />
+                <strong>GearScoreBonus</strong> {{GearScoreBonus}} <br />
+                <strong>Multiple:</strong> {{Multiple}}
+            </p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Item Name</th>
+                        <th>Quantity</th>
+                        <th>Probability</th>
+                        <th>Gear Score</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#each Items}}
+                        <tr>
+                            <td>{{Name}}</td>
+                            <td>{{Quantity.Low}}-{{Quantity.High}}</td>
+                            <td>{{Probability}}</td>
+                            <td>{{GearScore.Low}}-{{GearScore.High}}</td>
+                        </tr>
+                    {{/each}}
+                </tbody>
+            </table>
+        {{/each}}
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Loot Table</th>
+                </tr>
+            </thead>
+        </table>
+    </body>
+</html>
