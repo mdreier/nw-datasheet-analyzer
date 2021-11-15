@@ -3,7 +3,7 @@
       "target": "ES2021",
       "module": "esnext",
       "moduleResolution": "node",
-      "sourceMap": true,
+      "sourceMap": false,
       "allowSyntheticDefaultImports": true,
       "outDir": "dist",
       "declaration": true,
