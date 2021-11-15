@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { mkdirSync, writeFileSync } from "fs";
 import commandLineArgs from 'command-line-args';
-import { CommandLine, commandLineDefinition, printHelp } from "../commandline.js";
+import { CommandLine, commandLineDefinition, printHelp } from "./commandline.js";
 import { Analyzer, DataLoader, Formatter } from "../index.js";
 
 const commandLine = commandLineArgs(commandLineDefinition) as CommandLine;
