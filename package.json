@@ -2,10 +2,11 @@
   "name": "nw-analyzer",
   "version": "1.0.0",
   "description": "",
-  "main": "index.ts",
+  "main": "dist/index.js",
+  "types": "dist/types/index.d.ts",
   "type": "module",
   "bin": {
-    "anaylze-nw-data-files": "./src/bin/nwAnalyzer.ts"
+    "anaylze-nw-data-files": "./dist/bin/nwAnalyzer.ts"
   },
   "scripts": {
     "start": "node --loader ts-node/esm index.ts",

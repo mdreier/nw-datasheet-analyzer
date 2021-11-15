@@ -1,0 +1,10 @@
+# Do not include TypeScript sources
+src/
+# Output directory
+docs/
+# Data download directory
+data/
+# Visual Studio Code
+.vscode/
+# Tool configurations
+tsconfig.json

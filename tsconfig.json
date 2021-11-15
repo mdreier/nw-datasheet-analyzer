@@ -4,7 +4,10 @@
       "module": "esnext",
       "moduleResolution": "node",
       "sourceMap": true,
-      "allowSyntheticDefaultImports": true
+      "allowSyntheticDefaultImports": true,
+      "outDir": "dist",
+      "declaration": true,
+      "declarationDir": "dist/types"
     },
     "exclude": [
       "node_modules",
