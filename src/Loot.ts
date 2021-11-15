@@ -35,4 +35,23 @@ interface LootBucket {
     Quantity: number
 }
 
-export {Loot, LootTable, LootTableItem, NumberRange, LootBucket};
+interface AnalyzedLootItem {
+    Name: String,
+    GearScore?: NumberRange,
+    Quantity: NumberRange,
+    Probability: number
+}
+
+interface AnalyzedLootTable {
+    Id: string,
+    Multiple: boolean,
+    HighWaterMarkMultiplier: number,
+    UseLevelGearScore: boolean,
+    GearScoreBonus: number,
+    LuckSafe: boolean,
+    Conditions?: string,
+    Items: AnalyzedLootItem[]
+}
+
+
+export {Loot, LootTable, LootTableItem, NumberRange, LootBucket, AnalyzedLootItem, AnalyzedLootTable};
