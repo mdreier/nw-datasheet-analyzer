@@ -149,7 +149,11 @@ export class Analyzer {
      */
     #calculateItemProbability(tableMaxRoll: number, itemProbability: number): number {
         if (tableMaxRoll > 0) {
-            return 1 - (itemProbability / tableMaxRoll);
+            if (itemProbability > tableMaxRoll) {
+                return 0;
+            } else {
+                return 1 - (itemProbability / tableMaxRoll);
+            }
         } else {
             return itemProbability === 0 ? 1 : 0;
         }
