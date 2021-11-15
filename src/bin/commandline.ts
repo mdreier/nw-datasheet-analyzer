@@ -2,7 +2,10 @@ import commandLineUsage from 'command-line-usage';
 
 interface CommandLine {
     forceDownload: boolean,
-    help: boolean
+    help: boolean,
+    source: string,
+    data: string,
+    output: string
 }
 
 const commandLineDefinition = [
@@ -11,6 +14,24 @@ const commandLineDefinition = [
         alias: 'f', 
         type: Boolean,
         description: 'Force download of data files, even if they exist'
+    },
+    {
+        name: 'source',
+        alias: 's',
+        type: String,
+        description: 'Data file source (URL)'
+    },
+    {
+        name: 'data',
+        alias: 'd',
+        type: String,
+        description: 'Data directory'
+    },
+    {
+        name: 'output',
+        alias: 'o',
+        type: String,
+        description: 'Output directory'
     },
     { 
         name: 'help', 
@@ -23,7 +44,7 @@ function printHelp() {
     const sections = [
         {
             header: 'New World Data File Analyzer',
-            content: 'Analyze the data files of New World'
+            content: 'Analyze the data files of New World. Creates HTML output.'
         },
         {
             header: 'Options',

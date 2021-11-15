@@ -11,7 +11,7 @@ if (commandLine.help) {
     process.exit();
 }
 
-let loader = new DataLoader();
+let loader = new DataLoader(commandLine.source, commandLine.data);
 if (commandLine.forceDownload || !loader.dataFilesExist()) {
     await loader.download();
 }
@@ -20,5 +20,7 @@ let dataTables = loader.parse();
 let analyzer = new Analyzer(dataTables);
 let analyzedTables = analyzer.analyze();
 
-mkdirSync('./docs', {recursive: true});
-writeFileSync('./docs/lootTables.html', new Formatter(analyzedTables).html());
+let outputFolder = commandLine.output || './docs';
+
+mkdirSync(outputFolder, {recursive: true});
+writeFileSync(outputFolder + '/lootTables.html', new Formatter(analyzedTables).html());

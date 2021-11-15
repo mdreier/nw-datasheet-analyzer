@@ -24,6 +24,33 @@ const REPOSITORY = "https://raw.githubusercontent.com/Kattoor/nw-datasheets-json
  * Data loader for New World data files.
  */
 export class DataLoader {
+
+    /**
+     * Directory for data files.
+     */
+    #dataFilesDirectory: string;
+
+    /**
+     * Download source for data files.
+     */
+    #repository: string;
+
+    /**
+     * Create a new data loader instance.
+     * @param repository Download source for data files.
+     * @param dataFilesDirectory Directory for data files.
+     */
+    constructor(repository?: string, dataFilesDirectory?: string) {
+        this.#dataFilesDirectory = dataFilesDirectory || DATA_FILES_DIRECTORY;
+        if (!this.#dataFilesDirectory.endsWith('/')) {
+            this.#dataFilesDirectory += '/';
+        }
+        this.#repository = repository || REPOSITORY;
+        if (!this.#repository.endsWith('/')) {
+            this.#dataFilesDirectory += '/';
+        }
+    }
+
     /**
      * Parse the data files.
      * 
@@ -33,8 +60,8 @@ export class DataLoader {
         let parser = new LootParser();
         
         return {
-            lootTables: parser.parseLootTables(DATA_FILES_DIRECTORY + DataFiles.LootTables),
-            lootBuckets: parser.parseLootBuckets(DATA_FILES_DIRECTORY + DataFiles.LootBuckets)
+            lootTables: parser.parseLootTables(this.#dataFilesDirectory + DataFiles.LootTables),
+            lootBuckets: parser.parseLootBuckets(this.#dataFilesDirectory + DataFiles.LootBuckets)
         }
     }
 
@@ -45,13 +72,13 @@ export class DataLoader {
      */
     async download() {
         console.debug("Loading data files");
-        await fs.mkdir(DATA_FILES_DIRECTORY, {recursive: true});
+        await fs.mkdir(this.#dataFilesDirectory, {recursive: true});
         let downloads = [];
         for(let file in DataFiles) {
             downloads.push(
-                fetch(REPOSITORY + DataFiles[file])
+                fetch(this.#repository + DataFiles[file])
                     .then(response => response.text())
-                    .then(text => fs.writeFile(DATA_FILES_DIRECTORY + DataFiles[file], text))
+                    .then(text => fs.writeFile(this.#dataFilesDirectory + DataFiles[file], text))
             );
         }
         console.debug(`${downloads.length} data files queued for download`);
@@ -64,7 +91,7 @@ export class DataLoader {
      */
     dataFilesExist(): boolean {
         for(let file in DataFiles) {
-            if (!existsSync(DataFiles + DataFiles[file])) {
+            if (!existsSync(this.#dataFilesDirectory + DataFiles[file])) {
                 return false;
             }
             return true;
