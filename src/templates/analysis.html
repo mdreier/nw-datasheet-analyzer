@@ -28,9 +28,9 @@
                     {{#each Items}}
                         <tr>
                             <td>{{Name}}</td>
-                            <td>{{Quantity.Low}}-{{Quantity.High}}</td>
-                            <td>{{Probability}}</td>
-                            <td>{{GearScore.Low}}-{{GearScore.High}}</td>
+                            <td>{{range Quantity}}</td>
+                            <td>{{probability Probability}}</td>
+                            <td>{{range GearScore}}</td>
                         </tr>
                     {{/each}}
                 </tbody>
