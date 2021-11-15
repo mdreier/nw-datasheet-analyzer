@@ -106,7 +106,9 @@ export class Analyzer {
                                 Name: referencedItem.Name,
                                 Probability: itemProbability * this.#calculateItemProbability(referencedTable.MaxRoll, referencedItem.Probability),
                                 Quantity: this.#multiplyRange(item.Quantity, referencedItem.Quantity),
-                                GearScore: referencedItem.GearScore
+                                GearScore: referencedItem.GearScore,
+                                PerkBucketOverrides: referencedItem.PerkBucketOverrides,
+                                PerkOverrides: referencedItem.PerkOverrides
                             })
                         }
                         crossReferenceResolved = true;
@@ -132,7 +134,9 @@ export class Analyzer {
                         Name: item.Name,
                         Probability: itemProbability,
                         Quantity: item.Quantity,
-                        GearScore: item.GearScore
+                        GearScore: item.GearScore,
+                        PerkBucketOverrides: item.PerkBucketOverrides,
+                        PerkOverrides: item.PerkOverrides
                     });
                 }
             }

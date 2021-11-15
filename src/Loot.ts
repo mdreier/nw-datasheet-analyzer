@@ -7,7 +7,9 @@ interface LootTableItem {
     Name: string,
     GearScore?: NumberRange,
     Quantity: NumberRange,
-    Probability: number
+    Probability: number,
+    PerkBucketOverrides?: string,
+    PerkOverrides?: string
 }
 
 interface LootTable {
@@ -39,7 +41,9 @@ interface AnalyzedLootItem {
     Name: String,
     GearScore?: NumberRange,
     Quantity: NumberRange,
-    Probability: number
+    Probability: number,
+    PerkBucketOverrides?: string,
+    PerkOverrides?: string
 }
 
 interface AnalyzedLootTable {

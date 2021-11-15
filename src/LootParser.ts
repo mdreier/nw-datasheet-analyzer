@@ -185,7 +185,9 @@ export class LootParser {
                 Name: rawEntry["Item" + itemIndex] as string,
                 Quantity: {Low: 0, High: 0},
                 Probability: 0,
-                GearScore: this.#parseRange(rawEntry["GearScoreRange" + itemIndex])
+                GearScore: this.#parseRange(rawEntry["GearScoreRange" + itemIndex]),
+                PerkBucketOverrides: rawEntry["PerkBucketOverrides" + itemIndex],
+                PerkOverrides: rawEntry["PerkOverrides" + itemIndex]
             });
         }
 
