@@ -7,3 +7,6 @@ data/
 
 # Visual Studio Code
 .vscode/
+
+# Temporary scripts
+/dev*
