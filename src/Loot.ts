@@ -113,7 +113,6 @@ interface LootBucket {
      * Name of the bucket. This is a technical key.
      */
     Name: string,
-    Tags: string,
     /**
      * Only match one item.
      */

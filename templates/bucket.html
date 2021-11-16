@@ -1,0 +1,41 @@
+<html>
+    <head>
+        <title>New World Data File Analysis</title>
+    </head>
+    <body>
+        <h1>Loot Buckets</h1>
+
+        {{#each lootBuckets}}
+            <h2>{{Name}}</h2>
+            <p>
+                <strong>Match One:</strong> {{MatchOne}}<br />
+            </p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Item Name</th>
+                        <th>Quantity</th>
+                        <th>Tags</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#each Items}}
+                        <tr>
+                            <td>{{Name}}</td>
+                            <td>{{range Quantity}}</td>
+                            <td>{{Tags}}</td>
+                        </tr>
+                    {{/each}}
+                </tbody>
+            </table>
+        {{/each}}
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Loot Table</th>
+                </tr>
+            </thead>
+        </table>
+    </body>
+</html>

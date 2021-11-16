@@ -43,8 +43,10 @@ if (commandLine.query) {
 }
 
 if (commandLine.output) {
+    let formatter = new Formatter();
     mkdirSync(commandLine.output, {recursive: true});
-    writeFileSync(commandLine.output + '/lootTables.html', new Formatter(analyzedTables).html());
+    writeFileSync(commandLine.output + '/lootTables.html', formatter.lootTables(analyzedTables));
+    writeFileSync(commandLine.output + '/lootBuckets.html', formatter.lootBuckets(dataTables.lootBuckets));
 } else {
     process.stdout.write(JSON.stringify(analyzedTables, null, 2));
 }

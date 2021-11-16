@@ -3,6 +3,7 @@ import Handlebars from "handlebars";
 import { readFileSync } from "fs";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
+import { LootBucket } from ".";
 
 const TEMPLATE_DIR = dirname(fileURLToPath(import.meta.url)) + "/../templates/";
 
@@ -25,24 +26,19 @@ Handlebars.registerHelper("probability", function(probability: number): string {
 });
 
 const Templates = {
-    html: Handlebars.compile(readFileSync(TEMPLATE_DIR + "analysis.html", {encoding: 'utf-8'}))
+    analyzedLootTable: Handlebars.compile(readFileSync(TEMPLATE_DIR + "analysis.html", {encoding: 'utf-8'})),
+    lootBucket: Handlebars.compile(readFileSync(TEMPLATE_DIR + "bucket.html", {encoding: 'utf-8'}))
 }
 
 /**
  * Format analyzed loot tables.
  */
 export class Formatter {
-    /**
-     * Loot tables.
-     */
-    #lootTables: AnalyzedLootTable[];
-
-    constructor(lootTables: AnalyzedLootTable[]) {
-        this.#lootTables = lootTables;
+    lootTables(lootTables: AnalyzedLootTable[]): string {
+        return Templates.analyzedLootTable({lootTables: lootTables});
     }
 
-    html(): string {
-        return Templates.html({lootTables: this.#lootTables});
+    lootBuckets(lootBuckets: LootBucket[]): string {
+        return Templates.lootBucket({lootBuckets: lootBuckets});
     }
-
 }
