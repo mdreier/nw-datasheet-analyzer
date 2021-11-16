@@ -9,7 +9,7 @@
     "nw-datasheet-analyzer": "dist/bin/nwAnalyzer.js"
   },
   "scripts": {
-    "start": "node --loader ts-node/esm src/bin/nwAnalyzer.ts",
+    "start": "node --loader ts-node/esm --no-warnings src/bin/nwAnalyzer.ts",
     "apidoc": "typedoc",
     "test": "echo \"Error: no test specified\" && exit 1",
     "prepack": "tsc"
