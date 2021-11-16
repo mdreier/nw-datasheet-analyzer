@@ -5,7 +5,10 @@ interface CommandLine {
     help: boolean,
     source: string,
     data: string,
-    output: string
+    output: string,
+    query: string,
+    parsedQuery: string,
+    "no-analysis": boolean
 }
 
 const commandLineDefinition = [
@@ -26,6 +29,23 @@ const commandLineDefinition = [
         alias: 'd',
         type: String,
         description: 'Data directory'
+    },
+    {
+        name: 'parsedQuery',
+        alias: 'p',
+        type: String,
+        description: 'JSONPath query to be executed on the parsed tables (type Loot) before analysis'
+    },
+    {
+        name: 'no-analysis',
+        type: Boolean,
+        description: 'Skip analysis step, output raw data. Cannot be combined with --output.'
+    },
+    {
+        name: 'query',
+        alias: 'q',
+        type: String,
+        description: 'JSONPath query to be executed on the analyzed tables (type AnalyzedLootTable[]) before output'
     },
     {
         name: 'output',
