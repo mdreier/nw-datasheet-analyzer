@@ -208,8 +208,8 @@ export class LootParser {
         while (rawEntry["Item" + ++itemIndex]) {
             table.Items.push({
                 Name: rawEntry["Item" + itemIndex] as string,
-                Quantity: {Low: 0, High: 0}, //FIXME
-                Probability: 0,
+                Quantity: {Low: 0, High: 0}, // Updated when quantity entry is parsed
+                Probability: 0, // Updated when probability entry is parsed
                 GearScore: this.#parseRange(rawEntry["GearScoreRange" + itemIndex]),
                 PerkBucketOverrides: rawEntry["PerkBucketOverrides" + itemIndex],
                 PerkOverrides: rawEntry["PerkOverrides" + itemIndex]
