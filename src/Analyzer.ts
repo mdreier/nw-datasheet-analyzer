@@ -82,7 +82,7 @@ export class Analyzer {
                 Id: lootTable.LootTableID,
                 GearScoreBonus: lootTable.GearScoreBonus,
                 HighWaterMarkMultiplier: lootTable.HighWaterMarkMultiplier,
-                Multiple: lootTable.AndOr === "OR",
+                Multiple: lootTable.AndOr === "AND",
                 LuckSafe: lootTable.LuckSafe,
                 Conditions: lootTable.Conditions,
                 UseLevelGearScore: lootTable.UseLevelGearScore,
@@ -93,6 +93,8 @@ export class Analyzer {
             for (let item of lootTable.Items) {
                 this.#dereferenceItem(table.Items, item, lootTable, 1, 1);
             }
+
+            this.#adaptMultiProbabilities(table);
         }
         return analyzedTables;
     }
@@ -157,6 +159,20 @@ export class Analyzer {
             }
         } else {
             return itemProbability === 0 ? 1 : 0;
+        }
+    }
+
+    /**
+     * Adapt table item probabilities for tables where only one item can be selected.
+     * @param table Analyzed loot table.
+     */
+    #adaptMultiProbabilities(table: AnalyzedLootTable) {
+        if (table.Multiple === false) {
+            //Only one of the possible items can be selected
+            let possibleItemCount = table.Items.filter(item => item.Probability > 0).length;
+            for (let item of table.Items) {
+                item.Probability /= possibleItemCount;
+            }
         }
     }
 
