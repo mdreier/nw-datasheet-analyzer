@@ -6,13 +6,13 @@
   "types": "dist/types/index.d.ts",
   "type": "module",
   "bin": {
-    "analyze-nw-data-files": "dist/bin/nwAnalyzer.js"
+    "nw-datasheet-analyzer": "dist/bin/nwAnalyzer.js"
   },
   "scripts": {
     "start": "node --loader ts-node/esm src/bin/nwAnalyzer.ts",
-    "build": "tsc && typedoc",
+    "apidoc": "typedoc",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "prepublish": "build"
+    "prepack": "tsc"
   },
   "author": "Martin Dreier",
   "license": "Apache-2.0",
