@@ -2,9 +2,24 @@
 
 This tool allows analysis of the data files of New World. It is built to work on the converted data files produced by [Kattor's Data Sheet Reader](https://github.com/Kattoor/nw-datasheet-reader), which it can retrieve automatically.
 
+Some samples:
+
+* [All loot tables, probabilites calculated without luck influence](https://mdreier.github.io/nw-datasheet-analyzer/lootTables.html)
+* [Available loot buckets, may be referenced from loot tables](https://mdreier.github.io/nw-datasheet-analyzer/lootBuckets.html)
+
 ## Installation
 
-Clone this repository. If you want the module to be globally available, run `npm link` in the cloned folder.
+This tool is available on [npm](https://www.npmjs.com/package/nw-datasheet-analyzer). If you want to just use the command-line tool, install it globally:
+
+```
+npm install -g nw-datasheet-analyzer
+```
+
+If you want to use it in your own application or write custom scripts, install it into your dependencies:
+
+```
+npm install nw-datasheet-analyzer
+```
 
 ## Using the command line tool
 
