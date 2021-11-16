@@ -34,11 +34,20 @@ export class Analyzer {
     #lootBuckets: LootBucketLookup;
 
     /**
+     * Threshhold to resolve loot bucket references in loot table entries. Loot buckets with a number 
+     * of items larger than this threshhold are not resolved.
+     */
+    #resolveLootBucketThreshhold: number;
+
+    /**
      * Create a new instance for analysis of data tables.
      * @param dataTables Data tables to be analyzed.
+     * @param resolveLootBucketThreshhold Threshhold to resolve loot bucket references in loot table entries. Loot buckets with a number 
+     * of items larger than this threshhold are not resolved.
      */
-    constructor(dataTables: Loot) {
+    constructor(dataTables: Loot, resolveLootBucketThreshhold: number) {
         this.#dataTables = dataTables;
+        this.#resolveLootBucketThreshhold = resolveLootBucketThreshhold;
     }
 
     /**
@@ -99,6 +108,15 @@ export class Analyzer {
         return analyzedTables;
     }
 
+    /**
+     * Dereference an item and add it or the dereferenced items to an item list.
+     * 
+     * @param items List of items, dereferenced item(s) will be added to this list.
+     * @param item Item to process.
+     * @param lootTable Loot Table where the item is from.
+     * @param baseQuantity Base quantity for recursion, set to 1 in intial call.
+     * @param baseProbability Base probability for recursion, set to 1 in intial call.
+     */
     #dereferenceItem(items: AnalyzedLootItem[], item: LootTableItem, lootTable: LootTable, baseQuantity: NumberRange | number, baseProbability: number) {
         //Calculate base item probabilities
         let itemProbability = baseProbability * this.#calculateItemProbability(lootTable.MaxRoll, item.Probability);
@@ -120,12 +138,32 @@ export class Analyzer {
             if (!referencedBucket) {
                 console.warn(`Loot table ${lootTable.LootTableID} has unknown reference ${item.Name}`);
             } else {
-                items.push({
-                    Name: referencedBucket.Item,
-                    Probability: itemProbability,
-                    Quantity: this.#multiplyRange(item.Quantity, referencedBucket.Quantity),
-                    GearScore: item.GearScore
-                });
+                if (this.#resolveLootBucketThreshhold !== undefined && this.#resolveLootBucketThreshhold >= referencedBucket.Items.length) {
+                    console.debug(referencedBucket.Name + " -- " + referencedBucket.Items.length);
+                    for (let referencedItem of referencedBucket.Items) {
+                        items.push({
+                            Name: referencedItem.Name,
+                            //If the bucket is MatchOne, then probability for each item is the same (selection depends on tags)
+                            //Otherwise it can be any one of the items, and the probability is reduced accordingly
+                            Probability: referencedBucket.MatchOne ? itemProbability : itemProbability / referencedBucket.Items.length,
+                            Quantity: this.#multiplyRange(itemQuantity, referencedItem.Quantity),
+                            GearScore: item.GearScore,
+                            Tags: referencedItem.Tags,
+                            PerkBucketOverrides: item.PerkBucketOverrides,
+                            PerkOverrides: item.PerkOverrides
+                        });
+                    }
+                } else {
+                    items.push({
+                        Name: 'Pick from loot bucket: ' + referencedBucket.Name,
+                        Probability: itemProbability,
+                        Quantity: itemQuantity,
+                        GearScore: item.GearScore,
+                        Tags: [],
+                        PerkBucketOverrides: item.PerkBucketOverrides,
+                        PerkOverrides: item.PerkOverrides
+                    });
+                }
                 crossReferenceResolved = true;
             }
         }
@@ -138,7 +176,8 @@ export class Analyzer {
                 Quantity: item.Quantity,
                 GearScore: item.GearScore,
                 PerkBucketOverrides: item.PerkBucketOverrides,
-                PerkOverrides: item.PerkOverrides
+                PerkOverrides: item.PerkOverrides,
+                Tags: []
             });
         }
     }

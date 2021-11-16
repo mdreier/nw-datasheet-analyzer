@@ -32,7 +32,7 @@ if (endProcessing || commandLine["no-analysis"]) {
     process.exit(0);
 }
 
-let analyzer = new Analyzer(dataTables);
+let analyzer = new Analyzer(dataTables, 1);
 let analyzedTables = analyzer.analyze();
 
 if (commandLine.query) {

@@ -3,9 +3,9 @@ import { basename } from "path";
 import { LootBucket, LootTable, NumberRange } from "./Loot";
 
 /**
- * Number of items in a row.
+ * Number of items in an item bucket row. Max value as of 1.0.4 is 152, higher bound here to future-proof.
  */
-const ROW_ITEMS_BOUND = 152;
+const ROW_ITEMS_BOUND = 1000;
 
 interface RawLootTableEntry {
     LootTableID: string,
@@ -77,31 +77,56 @@ export class LootParser {
 
         let lootBuckets = [] as LootBucket[];
         for (let row of rawContent) {
-            let itemIndex = 0;
-            while (row["Quantity" + ++itemIndex]) {
-                if (itemIndex > ROW_ITEMS_BOUND) {
-                    //Seems to be the maximum index currently
-                    console.warn("Detected bounds violation, did data file structure change?");
-                    //Terminate loop to prevent endless loop
-                    break;
-                }
+            if (row.RowPlaceholders === "FIRSTROW") {
+                lootBuckets = this.#parseLootBucketDefinitions(row);
+                break;
+            }
+        }
 
-                if (row["Quantity" + itemIndex] === 0) {
-                    //Empty row
+        for (let row of rawContent) {
+            for (let itemIndex = 1; itemIndex <= lootBuckets.length; itemIndex++) {
+                if (!row["Quantity" + itemIndex] || row["Quantity" + itemIndex] === 0) {
+                    //No more items in this bucket
                     continue;
                 }
-                lootBuckets.push({
-                    Name: row["LootBucket" + itemIndex],
-                    MatchOne: this.#parseBoolean(row["MatchOne" + itemIndex]),
-                    Item: row["Item" + itemIndex],
-                    Quantity: row["Quantity" + itemIndex],
-                    Tags: row["Tags" + itemIndex] 
+
+                lootBuckets[itemIndex - 1].Items.push({
+                    Name: row["Item" + itemIndex],
+                    Quantity: this.#parseRange(row["Quantity" + itemIndex]),
+                    Tags: this.#parseList(row["Tags" + itemIndex])
                 });
             }
         }
 
         console.debug(`Parsed ${lootBuckets.length} loot buckets`);
         return lootBuckets;
+    }
+
+    /**
+     * Parse the item bucket definitions, usually contained in the first row of the loot bucket dats sheet.
+     * 
+     * @param row Item bucket row containing bucket definitions.
+     * @returns Defined loot buckets.
+     */
+    #parseLootBucketDefinitions(row: RawLootBucketRow): LootBucket[] {
+        let buckets = [] as LootBucket[];
+        let itemIndex = 0;
+        while (row["LootBucket" + ++itemIndex]) {
+            if (itemIndex > ROW_ITEMS_BOUND) {
+                //Seems to be the maximum index currently
+                console.warn("Detected bounds violation, did data file structure change?");
+                //Terminate loop to prevent endless loop
+                break;
+            }
+
+            buckets.push({
+                Name: row["LootBucket" + itemIndex],
+                Tags: row["Tags" + itemIndex],
+                MatchOne: this.#parseBoolean(row["MatchOne" + itemIndex]),
+                Items: []
+            });
+        }
+        return buckets;
     }
 
     /**
@@ -183,7 +208,7 @@ export class LootParser {
         while (rawEntry["Item" + ++itemIndex]) {
             table.Items.push({
                 Name: rawEntry["Item" + itemIndex] as string,
-                Quantity: {Low: 0, High: 0},
+                Quantity: {Low: 0, High: 0}, //FIXME
                 Probability: 0,
                 GearScore: this.#parseRange(rawEntry["GearScoreRange" + itemIndex]),
                 PerkBucketOverrides: rawEntry["PerkBucketOverrides" + itemIndex],
@@ -215,9 +240,18 @@ export class LootParser {
      * @param range Range in the format "100" or "100-150".
      * @returns Number range, or undefined if the argument is undefined.
      */
-    #parseRange(range: string): NumberRange {
+    #parseRange(range: string | number): NumberRange {        
         if (!range) {
-            return undefined;
+            return {
+                Low: 0,
+                High: 0
+            };
+        }
+        if (typeof range === 'number') {
+            return {
+                Low: range,
+                High: range
+            }
         }
         let dashIndex = range.indexOf('-');
         if (dashIndex < 0) {
@@ -231,5 +265,20 @@ export class LootParser {
                 High: Number.parseInt(range.substring(dashIndex + 1))
             }
         }
+    }
+
+    /**
+     * Parse a comma-separated list of values.
+     * 
+     * @param list List of values.
+     */
+    #parseList(list: string): string[] {
+        if (!list) {
+            return [];
+        }
+        if (list.trim().length === 0) {
+            return [];
+        }
+        return list.split(',').map(value => value.trim()).filter(value => value.length !== 0);
     }
 }

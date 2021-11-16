@@ -88,6 +88,24 @@ interface Loot {
 }
 
 /**
+ * Item in  a loot bucket.
+ */
+interface LootBucketItem {
+    /**
+     * Item name.
+     */
+    Name: string,
+    /**
+     * Quantity.
+     */
+    Quantity: NumberRange,
+    /**
+     * Item tags.
+     */
+    Tags: string[]
+}
+
+/**
  * Loot bucket.
  */
 interface LootBucket {
@@ -96,15 +114,14 @@ interface LootBucket {
      */
     Name: string,
     Tags: string,
+    /**
+     * Only match one item.
+     */
     MatchOne: boolean,
     /**
      * Loot bucket item.
      */
-    Item: string,
-    /**
-     * Quantity of the loot bucket item.
-     */
-    Quantity: number
+    Items: LootBucketItem[]
 }
 
 /**
@@ -132,7 +149,11 @@ interface AnalyzedLootItem {
      */
     Probability: number,
     PerkBucketOverrides?: string,
-    PerkOverrides?: string
+    PerkOverrides?: string,
+    /**
+     * Item tags.
+     */
+    Tags: string[]
 }
 
 /**
