@@ -139,10 +139,9 @@ export class Analyzer {
                 console.warn(`Loot table ${lootTable.LootTableID} has unknown reference ${item.Name}`);
             } else {
                 if (this.#resolveLootBucketThreshhold !== undefined && this.#resolveLootBucketThreshhold >= referencedBucket.Items.length) {
-                    console.debug(referencedBucket.Name + " -- " + referencedBucket.Items.length);
                     for (let referencedItem of referencedBucket.Items) {
                         items.push({
-                            Name: referencedItem.Name,
+                            Name: referencedItem.Tags.length === 0 ? referencedItem.Name : `${referencedItem.Name} (${referencedItem.Tags.join(',')})`,
                             //If the bucket is MatchOne, then probability for each item is the same (selection depends on tags)
                             //Otherwise it can be any one of the items, and the probability is reduced accordingly
                             Probability: referencedBucket.MatchOne ? itemProbability : itemProbability / referencedBucket.Items.length,
