@@ -23,7 +23,7 @@ npm install nw-datasheet-analyzer
 
 ## Using the command line tool
 
-You can run a basic analysis using the command line script `nw-datasheet-analyzer`. After you cloned the project, run `npm start` to run the script. By default, it will download [Kattoor's data files](https://github.com/Kattoor/nw-datasheets-json) into the folder `data` and prints the result to the standard output. You can see more options by running `npm start -- --help`.
+You can run a basic analysis using the command line script `nw-datasheet-analyzer`. After you installed it (see above), run `nw-datasheet-analyzer`. By default, it will download [Kattoor's data files](https://github.com/Kattoor/nw-datasheets-json) into the folder `data` and prints the result to the standard output. You can see more options by running `nw-datasheet-analyzer --help`.
 
 To analyze the data (e.g filter for certain loot tables), use the command line options `--parsedQuery` (working on the parsed data) or `--query` (working on the analyzed data). Both commands use JSONPath syntax, consult the [documentation](https://github.com/JSONPath-Plus/JSONPath#syntax-through-examples) to see your options. The data types on which you are querying are [`Loot`](https://mdreier.github.io/nw-datasheet-analyzer/api/interfaces/Loot.html) (parsed data) and [`AnalyzedLootTable[]`](https://mdreier.github.io/nw-datasheet-analyzer/api/interfaces/AnalyzedLootTable.html) (analyzed data).
 
