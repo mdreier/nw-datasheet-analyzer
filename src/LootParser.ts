@@ -194,7 +194,7 @@ export class LootParser {
         var table = {
             LootTableID: rawEntry.LootTableID,
             AndOr: rawEntry["AND/OR"],
-            Conditions: rawEntry.Conditions,
+            Conditions: this.#parseList(rawEntry.Conditions),
             HighWaterMarkMultiplier: rawEntry.HWMMult,
             UseLevelGearScore: this.#parseBoolean(rawEntry.UseLevelGS),
             GearScoreBonus: rawEntry.GSBonus,

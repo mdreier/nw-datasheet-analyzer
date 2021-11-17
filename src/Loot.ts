@@ -66,7 +66,7 @@ interface LootTable {
     /**
      * Requirements for getting this item.
      */
-    Conditions?: string,
+    Conditions: string[],
     /**
      * Roll is not influenced by luck.
      */
@@ -152,7 +152,11 @@ interface AnalyzedLootItem {
     /**
      * Item tags.
      */
-    Tags: string[]
+    Tags: string[],
+    /**
+     * Conditions under which this item can be obtained.
+     */
+    Conditions: string[]
 }
 
 /**
@@ -178,10 +182,6 @@ interface AnalyzedLootTable {
      * Roll is not influenced by luck.
      */
     LuckSafe: boolean,
-    /**
-     * Requirements for getting this item.
-     */
-    Conditions?: string,
     /**
      * Items in the loot table.
      */

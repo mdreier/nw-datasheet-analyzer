@@ -13,6 +13,18 @@ const CrossRefereceTags = {
     LootBucket: "[LBID]"
 }
 
+const Conditions = {
+    Named: "Named",
+    Elite: "Elite",
+    EnemyLevel: "EnemyLevel",
+    Fish: ["Fresh", "Salt", "FishRarity", "FishSize"],
+    Common: "Common",
+    Location: ["ShatteredObelisk", "Edengrove00", "RestlessShores01", "Amrine", "Reekwater00", "Ebonscale00"],
+    GlobalMod: "GlobalMod",
+    MinPOIContLevel: "MinPOIContLevel",
+    Level: "Level"
+}
+
 /**
  * Analysis tool for data files.
  */
@@ -93,17 +105,16 @@ export class Analyzer {
                 HighWaterMarkMultiplier: lootTable.HighWaterMarkMultiplier,
                 Multiple: lootTable.AndOr === "AND",
                 LuckSafe: lootTable.LuckSafe,
-                Conditions: lootTable.Conditions,
                 UseLevelGearScore: lootTable.UseLevelGearScore,
                 Items: []
             };
             analyzedTables.push(table);
 
             for (let item of lootTable.Items) {
-                this.#dereferenceItem(table.Items, item, lootTable, 1, 1);
+                this.#dereferenceItem(table.Items, item, lootTable);
             }
 
-            this.#adaptMultiProbabilities(table);
+            this.#adaptMultiProbabilities(table, lootTable.Conditions);
         }
         return analyzedTables;
     }
@@ -116,10 +127,17 @@ export class Analyzer {
      * @param lootTable Loot Table where the item is from.
      * @param baseQuantity Base quantity for recursion, set to 1 in intial call.
      * @param baseProbability Base probability for recursion, set to 1 in intial call.
+     * @param fromNamed Called from a named item. Used in recursion only.
      */
-    #dereferenceItem(items: AnalyzedLootItem[], item: LootTableItem, lootTable: LootTable, baseQuantity: NumberRange | number, baseProbability: number) {
+    #dereferenceItem(items: AnalyzedLootItem[], item: LootTableItem, lootTable: LootTable, baseQuantity: NumberRange | number = 1, baseProbability: number = 1, fromNamed: boolean = false) {
         //Calculate base item probabilities
-        let itemProbability = baseProbability * this.#calculateItemProbability(lootTable.MaxRoll, item.Probability);
+        let itemProbability;
+        if (lootTable.Conditions) {
+            //When conditions are set the probability is not calculated based on the roll
+            itemProbability = baseProbability;
+        } else {
+            itemProbability = baseProbability * this.#calculateItemProbability(lootTable.MaxRoll, item.Probability);
+        }
         let itemQuantity = this.#multiplyRange(item.Quantity, baseQuantity);
         //Resolve possible cross references
         let crossReferenceResolved = false;
@@ -129,7 +147,7 @@ export class Analyzer {
                 console.warn(`Loot table ${lootTable.LootTableID} has unknown reference ${item.Name}`);
             } else {
                 for (let referencedItem of referencedTable.Items) {
-                    this.#dereferenceItem(items, referencedItem, referencedTable, itemQuantity, itemProbability);
+                    this.#dereferenceItem(items, referencedItem, referencedTable, itemQuantity, itemProbability, fromNamed || lootTable.Conditions.indexOf(Conditions.Named) >= 0);
                 }
                 crossReferenceResolved = true;
             }
@@ -149,7 +167,8 @@ export class Analyzer {
                             GearScore: item.GearScore,
                             Tags: referencedItem.Tags,
                             PerkBucketOverrides: item.PerkBucketOverrides,
-                            PerkOverrides: item.PerkOverrides
+                            PerkOverrides: item.PerkOverrides,
+                            Conditions: []
                         });
                     }
                 } else {
@@ -160,7 +179,8 @@ export class Analyzer {
                         GearScore: item.GearScore,
                         Tags: [],
                         PerkBucketOverrides: item.PerkBucketOverrides,
-                        PerkOverrides: item.PerkOverrides
+                        PerkOverrides: item.PerkOverrides,
+                        Conditions: this.#buildConditions(lootTable, item)
                     });
                 }
                 crossReferenceResolved = true;
@@ -176,7 +196,8 @@ export class Analyzer {
                 GearScore: item.GearScore,
                 PerkBucketOverrides: item.PerkBucketOverrides,
                 PerkOverrides: item.PerkOverrides,
-                Tags: []
+                Tags: [],
+                Conditions: this.#buildConditions(lootTable, item)
             });
         }
     }
@@ -186,7 +207,7 @@ export class Analyzer {
      * 
      * @param tableMaxRoll Max roll property of the table.
      * @param itemProbability Individual item probability value.
-     * @returns Mathematical robability.
+     * @returns Mathematical probability (between 0 and 1 inclusive).
      */
     #calculateItemProbability(tableMaxRoll: number, itemProbability: number): number {
         if (tableMaxRoll > 0) {
@@ -203,9 +224,22 @@ export class Analyzer {
     /**
      * Adapt table item probabilities for tables where only one item can be selected.
      * @param table Analyzed loot table.
+     * @param conditions Conditions of the table.
      */
-    #adaptMultiProbabilities(table: AnalyzedLootTable) {
-        if (table.Multiple === false) {
+    #adaptMultiProbabilities(table: AnalyzedLootTable, conditions: string[]) {
+        let onlyOne = !table.Multiple;
+        if (conditions.length > 0) {
+            for (let condition of conditions) {
+                if (condition === Conditions.EnemyLevel || condition === Conditions.Named) {
+                    //These conditions work as a selector
+                    onlyOne = true;
+                } else if (Conditions.Location.indexOf(condition) >= 0) {
+                    //Also selects items, but in sub-table
+                    onlyOne = false;
+                }
+            }
+        }
+        if (onlyOne) {
             //Only one of the possible items can be selected
             let possibleItemCount = table.Items.filter(item => item.Probability > 0).length;
             for (let item of table.Items) {
@@ -214,6 +248,26 @@ export class Analyzer {
         }
     }
 
+    #buildConditions(lootTable: LootTable, item: LootTableItem): string[] {
+        let conditions = [];
+        for (let condition of lootTable.Conditions) {
+            switch(condition) {
+                case Conditions.EnemyLevel:
+                case Conditions.Level:
+                case Conditions.MinPOIContLevel:
+                    conditions.push(Conditions.EnemyLevel + " >= " + item.Probability);
+                    continue;
+                default:
+                    if (Conditions.Location.indexOf(condition) >= 0) {
+                        conditions.push("Location = " + condition);
+                    } else {
+                        conditions.push(condition);
+                    }
+                    continue;
+            }
+        }
+        return conditions;
+    }
     /**
      * Multiply two number ranges or a range with a number.
      * @param baseRange One range.
