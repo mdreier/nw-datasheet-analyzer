@@ -36,7 +36,11 @@ interface LootTableItem {
      */
     Probability: number,
     PerkBucketOverrides?: string,
-    PerkOverrides?: string
+    PerkOverrides?: string,
+    /**
+     * Conditions for attaining the item.
+     */
+    Conditions: Conditions
 }
 
 /**
@@ -63,10 +67,6 @@ interface LootTable {
      * (unconfirmed)
      */
     UseLevelGearScore: boolean,
-    /**
-     * Requirements for getting this item.
-     */
-    Conditions: string[],
     /**
      * Roll is not influenced by luck.
      */
@@ -100,9 +100,9 @@ interface LootBucketItem {
      */
     Quantity: NumberRange,
     /**
-     * Item tags.
+     * Conditions for attaining the item.
      */
-    Tags: string[]
+     Conditions: Conditions
 }
 
 /**
@@ -121,6 +121,40 @@ interface LootBucket {
      * Loot bucket item.
      */
     Items: LootBucketItem[]
+}
+
+/**
+ * Conditions for attaining an item. Properties that are
+ * `undefined` are not evaluated.
+ */
+interface Conditions {
+    /**
+     * Global modifier. Unclear, what this does.
+     */
+    GlobalMod?: boolean;
+    Levels: {
+        /**
+         * Character level.
+         */
+        Character?: NumberRange,
+        /**
+         * Content or POI level.
+         */
+        Content?: NumberRange,
+        /**
+         * Enemy level.
+         */
+        Enemy?: NumberRange
+    };
+    /**
+     * Enemy or POI names and tags. An empty array means no
+     * limitations, otherwise at least one name must match.
+     */
+    Named: string[];
+    Fishing?: {
+        Salt: boolean
+    };
+    Elite?: boolean;
 }
 
 /**
@@ -150,13 +184,9 @@ interface AnalyzedLootItem {
     PerkBucketOverrides?: string,
     PerkOverrides?: string,
     /**
-     * Item tags.
-     */
-    Tags: string[],
-    /**
      * Conditions under which this item can be obtained.
      */
-    Conditions: string[]
+    Conditions: Conditions
 }
 
 /**
@@ -189,4 +219,4 @@ interface AnalyzedLootTable {
 }
 
 
-export {Loot, LootTable, LootTableItem, NumberRange, LootBucket, AnalyzedLootItem, AnalyzedLootTable};
+export {Loot, LootTable, LootTableItem, NumberRange, LootBucket, LootBucketItem, AnalyzedLootItem, AnalyzedLootTable, Conditions};

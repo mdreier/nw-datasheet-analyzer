@@ -1,6 +1,6 @@
 import { readFileSync } from "fs";
 import { basename } from "path";
-import { LootBucket, LootTable, NumberRange } from "./Loot";
+import { Conditions, LootBucket, LootTable, NumberRange } from "./Loot";
 
 /**
  * Number of items in an item bucket row. Max value as of 1.0.4 is 152, higher bound here to future-proof.
@@ -26,9 +26,35 @@ interface LootTables {
     [lootTableName: string]: LootTable
 }
 
+interface InternalConditions extends Conditions {
+    probabilityType?: string
+}
+
 const Suffixes = {
     Quantity: "_Qty",
     Probability: "_Probs"
+}
+
+const ConditionNames = {
+    Named: "Named",
+    Elite: "Elite",
+    EnemyLevel: "EnemyLevel",
+    Fish: {
+        Fresh: "Fresh", 
+        Salt: "Salt", 
+        FishRarity: "FishRarity", 
+        FishSize: "FishSize"
+    },
+    Common: "Common",
+    GlobalMod: "GlobalMod",
+    MinPOIContLevel: "MinPOIContLevel",
+    Level: "Level"
+}
+
+const TagNames = {
+    MinContLevel: "MinContLevel",
+    Level: "Level",
+
 }
 
 export class LootParser {
@@ -93,7 +119,7 @@ export class LootParser {
                 lootBuckets[itemIndex - 1].Items.push({
                     Name: row["Item" + itemIndex],
                     Quantity: this.#parseRange(row["Quantity" + itemIndex]),
-                    Tags: this.#parseList(row["Tags" + itemIndex])
+                    Conditions: this.#parseTags(this.#parseList(row["Tags" + itemIndex]))
                 });
             }
         }
@@ -180,7 +206,27 @@ export class LootParser {
 
         let itemIndex = 0;
         while(probabilityEntry["Item" + ++itemIndex]) {
-            mainEntry.Items[itemIndex - 1].Probability = Number.parseInt(probabilityEntry["Item" + itemIndex]);
+            let item = mainEntry.Items[itemIndex - 1];
+            let conditions = item.Conditions as InternalConditions;
+            let probability = Number.parseInt(probabilityEntry["Item" + itemIndex]);
+            if (conditions.probabilityType !== undefined) {
+                //Probability is not a probability, but a value for the condition
+                //See #parseConditions()
+                item.Probability = 0;
+                switch (conditions.probabilityType) {
+                    case ConditionNames.Level:
+                        item.Conditions.Levels.Character = {Low: probability, High: Number.MAX_SAFE_INTEGER};
+                        break;
+                    case ConditionNames.EnemyLevel:
+                        item.Conditions.Levels.Enemy = {Low: probability, High: Number.MAX_SAFE_INTEGER};
+                        break;
+                    case ConditionNames.MinPOIContLevel:
+                        item.Conditions.Levels.Content = {Low: probability, High: Number.MAX_SAFE_INTEGER};
+                        break;
+                }
+            } else {
+                item.Probability = probability;
+            }
         }
     }
 
@@ -194,7 +240,6 @@ export class LootParser {
         var table = {
             LootTableID: rawEntry.LootTableID,
             AndOr: rawEntry["AND/OR"],
-            Conditions: this.#parseList(rawEntry.Conditions),
             HighWaterMarkMultiplier: rawEntry.HWMMult,
             UseLevelGearScore: this.#parseBoolean(rawEntry.UseLevelGS),
             GearScoreBonus: rawEntry.GSBonus,
@@ -203,6 +248,7 @@ export class LootParser {
         } as LootTable;
 
         let itemIndex = 0;
+        let conditions = this.#parseConditions(rawEntry.Conditions);
 
         while (rawEntry["Item" + ++itemIndex]) {
             table.Items.push({
@@ -211,7 +257,8 @@ export class LootParser {
                 Probability: 0, // Updated when probability entry is parsed
                 GearScore: this.#parseRange(rawEntry["GearScoreRange" + itemIndex]),
                 PerkBucketOverrides: rawEntry["PerkBucketOverrides" + itemIndex],
-                PerkOverrides: rawEntry["PerkOverrides" + itemIndex]
+                PerkOverrides: rawEntry["PerkOverrides" + itemIndex],
+                Conditions: conditions
             });
         }
 
@@ -279,5 +326,78 @@ export class LootParser {
             return [];
         }
         return list.split(',').map(value => value.trim()).filter(value => value.length !== 0);
+    }
+
+    /**
+     * Parse conditions of a table.
+     * @param table The conditions of the loot table.
+     * @param item The loot item.
+     * @returns Conditions for attaining the item.
+     */
+    #parseConditions(tableConditions: string): InternalConditions {
+        let conditions: InternalConditions = {
+            Levels: {},
+            Named: []
+        };
+        if (!tableConditions) {
+            return conditions;
+        }
+        for (let condition of tableConditions.split(',')) {
+            switch(condition) {
+                case ConditionNames.EnemyLevel:
+                case ConditionNames.Level:
+                case ConditionNames.MinPOIContLevel:
+                    conditions.probabilityType = condition;
+                    break;
+                case ConditionNames.Common:
+                case ConditionNames.Elite:
+                    conditions.Elite = condition === ConditionNames.Elite;
+                    break;
+                case ConditionNames.GlobalMod:
+                    conditions.GlobalMod = true;
+                    break;
+                case ConditionNames.Fish.Fresh:
+                case ConditionNames.Fish.Salt:
+                    conditions.Fishing = {
+                        Salt: condition === ConditionNames.Fish.Salt
+                    }
+                    break;
+                case ConditionNames.Named:
+                case ConditionNames.Fish.FishRarity:
+                case ConditionNames.Fish.FishSize:
+                    //Not evaluated
+                    break;
+                default:
+                    conditions.Named.push(condition);
+                    break;
+            }
+        }
+        return conditions;
+    }
+
+    /**
+     * Parse loot bucket tags.
+     * @param tags List of loot bucked tags.
+     */
+    #parseTags(tags: string[]): Conditions {
+        let conditions: Conditions = {
+            Levels: {},
+            Named: []
+        }
+        for (let tag of tags) {
+            let [name, value] = tag.split(':');
+            switch (name) {
+                case TagNames.MinContLevel:
+                    conditions.Levels.Content = this.#parseRange(value);
+                    break;
+                case TagNames.Level: 
+                    conditions.Levels.Character = this.#parseRange(value);
+                    break;
+                default:
+                    conditions.Named.push(tag);
+                    break;
+            }
+        }
+        return conditions;
     }
 }

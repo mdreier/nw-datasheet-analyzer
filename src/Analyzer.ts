@@ -1,4 +1,4 @@
-import { AnalyzedLootItem, AnalyzedLootTable, Loot, LootBucket, LootTable, LootTableItem, NumberRange } from "./Loot";
+import { AnalyzedLootItem, AnalyzedLootTable, Loot, LootBucket, LootBucketItem, LootTable, LootTableItem, NumberRange } from "./Loot";
 
 interface LootTableLookup {
     [lootTableId: string]: LootTable;
@@ -8,21 +8,53 @@ interface LootBucketLookup {
     [lootBucketName: string]: LootBucket;
 }
 
+const Comparison = {
+    Min: '>',
+    Max: '<',
+    Equals: '='
+}
+
 const CrossRefereceTags = {
     LootTable: "[LTID]",
     LootBucket: "[LBID]"
 }
 
-const Conditions = {
-    Named: "Named",
-    Elite: "Elite",
-    EnemyLevel: "EnemyLevel",
-    Fish: ["Fresh", "Salt", "FishRarity", "FishSize"],
-    Common: "Common",
-    Location: ["ShatteredObelisk", "Edengrove00", "RestlessShores01", "Amrine", "Reekwater00", "Ebonscale00"],
-    GlobalMod: "GlobalMod",
-    MinPOIContLevel: "MinPOIContLevel",
-    Level: "Level"
+/**
+ * Settings to influence probability calculations.
+ */
+interface ProbabilityContext {
+    /**
+     * Location where the character is. `undefined` means any location,
+     * i.e. the location is not considered. If this is set, even without any
+     * information, no conditional items are returned (unless conditions match).
+     */
+    Location?: {
+        Name?: string,
+        Type?: string,
+        Level?: number
+    },
+    /**
+     * Information about the enemy. `undefined` means no evaluation. If this
+     * is set, even without any information, no conditional items are returned
+     * (unless conditions match).
+     */
+    Enemy?: {
+        Name?: string,
+        Type?: string,
+        Level?: number,
+        /**
+         * Flag if the enemy is an elite. `undefined` returns loot for both common and elite enemies.
+         */
+        Elite?: boolean,
+    }
+    /**
+     * Fresh or salt water, only relevant for fishing. `false` means fresh water, `true` means salt water.
+     */
+    Salt?: boolean
+    /**
+     * The character's level.
+     */
+     CharacterLevel?: number
 }
 
 /**
@@ -65,10 +97,10 @@ export class Analyzer {
     /**
      * Analyze the data tables.
      */
-    analyze(): AnalyzedLootTable[] {
+    analyze(context?: ProbabilityContext): AnalyzedLootTable[] {
         //TODO: Consider luck bonuses
         this.#buildLookupTables();
-        return this.#analyzeLootTables();
+        return this.#analyzeLootTables(context || {});
     }
 
     /**
@@ -96,7 +128,7 @@ export class Analyzer {
      * Analyze the loot tables.
      * @returns Analyzed tables.
      */
-    #analyzeLootTables(): AnalyzedLootTable[] {
+    #analyzeLootTables(context: ProbabilityContext): AnalyzedLootTable[] {
         let analyzedTables = [] as AnalyzedLootTable[];
         for (let lootTable of this.#dataTables.lootTables) {
             let table: AnalyzedLootTable = {
@@ -113,8 +145,8 @@ export class Analyzer {
             for (let item of lootTable.Items) {
                 this.#dereferenceItem(table.Items, item, lootTable);
             }
-
-            this.#adaptMultiProbabilities(table, lootTable.Conditions);
+            table.Items = table.Items.filter(item => this.#filterByContext(item, context));
+            this.#adaptMultiProbabilities(table);
         }
         return analyzedTables;
     }
@@ -131,13 +163,7 @@ export class Analyzer {
      */
     #dereferenceItem(items: AnalyzedLootItem[], item: LootTableItem, lootTable: LootTable, baseQuantity: NumberRange | number = 1, baseProbability: number = 1, fromNamed: boolean = false) {
         //Calculate base item probabilities
-        let itemProbability;
-        if (lootTable.Conditions) {
-            //When conditions are set the probability is not calculated based on the roll
-            itemProbability = baseProbability;
-        } else {
-            itemProbability = baseProbability * this.#calculateItemProbability(lootTable.MaxRoll, item.Probability);
-        }
+        let itemProbability = baseProbability * this.#calculateItemProbability(lootTable.MaxRoll, item.Probability);
         let itemQuantity = this.#multiplyRange(item.Quantity, baseQuantity);
         //Resolve possible cross references
         let crossReferenceResolved = false;
@@ -147,7 +173,7 @@ export class Analyzer {
                 console.warn(`Loot table ${lootTable.LootTableID} has unknown reference ${item.Name}`);
             } else {
                 for (let referencedItem of referencedTable.Items) {
-                    this.#dereferenceItem(items, referencedItem, referencedTable, itemQuantity, itemProbability, fromNamed || lootTable.Conditions.indexOf(Conditions.Named) >= 0);
+                    this.#dereferenceItem(items, referencedItem, referencedTable, itemQuantity, itemProbability, fromNamed);
                 }
                 crossReferenceResolved = true;
             }
@@ -159,16 +185,16 @@ export class Analyzer {
                 if (this.#resolveLootBucketThreshhold !== undefined && this.#resolveLootBucketThreshhold >= referencedBucket.Items.length) {
                     for (let referencedItem of referencedBucket.Items) {
                         items.push({
-                            Name: referencedItem.Tags.length === 0 ? referencedItem.Name : `${referencedItem.Name} (${referencedItem.Tags.join(',')})`,
+                            Name: referencedItem.Name,
                             //If the bucket is MatchOne, then probability for each item is the same (selection depends on tags)
                             //Otherwise it can be any one of the items, and the probability is reduced accordingly
+                            //TODO: Check with conditions!
                             Probability: referencedBucket.MatchOne ? itemProbability : itemProbability / referencedBucket.Items.length,
                             Quantity: this.#multiplyRange(itemQuantity, referencedItem.Quantity),
                             GearScore: item.GearScore,
-                            Tags: referencedItem.Tags,
                             PerkBucketOverrides: item.PerkBucketOverrides,
                             PerkOverrides: item.PerkOverrides,
-                            Conditions: []
+                            Conditions: referencedItem.Conditions
                         });
                     }
                 } else {
@@ -177,10 +203,9 @@ export class Analyzer {
                         Probability: itemProbability,
                         Quantity: itemQuantity,
                         GearScore: item.GearScore,
-                        Tags: [],
                         PerkBucketOverrides: item.PerkBucketOverrides,
                         PerkOverrides: item.PerkOverrides,
-                        Conditions: this.#buildConditions(lootTable, item)
+                        Conditions: item.Conditions
                     });
                 }
                 crossReferenceResolved = true;
@@ -196,9 +221,62 @@ export class Analyzer {
                 GearScore: item.GearScore,
                 PerkBucketOverrides: item.PerkBucketOverrides,
                 PerkOverrides: item.PerkOverrides,
-                Tags: [],
-                Conditions: this.#buildConditions(lootTable, item)
+                Conditions: item.Conditions
             });
+        }
+    }
+
+     /**
+     * Filter items in the loot table according to the given context.
+     * @param table Loot table, item list will be modified.
+     * @param context The context for evaluating conditions.
+     */
+    #filterByContext(item: AnalyzedLootItem, context: ProbabilityContext): boolean {
+        if (this.#conditionFailed(context.Enemy?.Elite, item.Conditions.Elite)) {
+            return false;
+        }
+        if (this.#conditionFailed(context.Salt, item.Conditions.Fishing?.Salt)) {
+            return false;
+        }
+        if (this.#conditionFailed(context.CharacterLevel, item.Conditions.Levels.Character)) {
+            return false;
+        }
+        if (this.#conditionFailed(context.Location?.Level, item.Conditions.Levels.Content)) {
+            return false;
+        }
+        if (this.#conditionFailed(context.Enemy?.Level, item.Conditions.Levels.Enemy)) {
+            return false;
+        }
+        //Evaluate named condition if either location or enemy information are set
+        let matchedNames = [context.Enemy?.Name, context.Enemy?.Type, context.Location?.Name, context.Location?.Type].filter(item => item !== undefined);
+        if (context.Enemy !== undefined || context.Location !== undefined) {
+            for (let name of item.Conditions.Named) {
+                let index = matchedNames.indexOf(name);
+                if (index >= 0) {
+                    matchedNames.splice(index, 1);
+                }
+            }
+            if (matchedNames.length > 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Check if a condition has been failed.
+     * @param contextField Evaluated context field, may be `undefined`.
+     * @param expectedValue The expected value if the context field.
+     */
+    #conditionFailed(contextField: any, expectedValue: any): boolean {
+        if (contextField === undefined || expectedValue === undefined) {
+            return false;
+        }
+        if (typeof expectedValue === 'object' && "Low" in expectedValue && "High" in expectedValue) {
+            let expectedRange = expectedValue as NumberRange;
+            return expectedRange.Low <= contextField && contextField <= expectedRange.High;
+        } else {
+            return contextField == expectedValue
         }
     }
 
@@ -226,20 +304,8 @@ export class Analyzer {
      * @param table Analyzed loot table.
      * @param conditions Conditions of the table.
      */
-    #adaptMultiProbabilities(table: AnalyzedLootTable, conditions: string[]) {
-        let onlyOne = !table.Multiple;
-        if (conditions.length > 0) {
-            for (let condition of conditions) {
-                if (condition === Conditions.EnemyLevel || condition === Conditions.Named) {
-                    //These conditions work as a selector
-                    onlyOne = true;
-                } else if (Conditions.Location.indexOf(condition) >= 0) {
-                    //Also selects items, but in sub-table
-                    onlyOne = false;
-                }
-            }
-        }
-        if (onlyOne) {
+    #adaptMultiProbabilities(table: AnalyzedLootTable) {
+        if (!table.Multiple) {
             //Only one of the possible items can be selected
             let possibleItemCount = table.Items.filter(item => item.Probability > 0).length;
             for (let item of table.Items) {
@@ -248,26 +314,6 @@ export class Analyzer {
         }
     }
 
-    #buildConditions(lootTable: LootTable, item: LootTableItem): string[] {
-        let conditions = [];
-        for (let condition of lootTable.Conditions) {
-            switch(condition) {
-                case Conditions.EnemyLevel:
-                case Conditions.Level:
-                case Conditions.MinPOIContLevel:
-                    conditions.push(Conditions.EnemyLevel + " >= " + item.Probability);
-                    continue;
-                default:
-                    if (Conditions.Location.indexOf(condition) >= 0) {
-                        conditions.push("Location = " + condition);
-                    } else {
-                        conditions.push(condition);
-                    }
-                    continue;
-            }
-        }
-        return conditions;
-    }
     /**
      * Multiply two number ranges or a range with a number.
      * @param baseRange One range.
