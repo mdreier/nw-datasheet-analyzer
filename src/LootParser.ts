@@ -1,6 +1,7 @@
 import { readFileSync } from "fs";
 import { basename } from "path";
 import { Conditions, LootBucket, LootTable, NumberRange } from "./Loot";
+import clone from 'just-clone';
 
 /**
  * Number of items in an item bucket row. Max value as of 1.0.4 is 152, higher bound here to future-proof.
@@ -202,7 +203,8 @@ export class LootParser {
             return;
         }
 
-        mainEntry.MaxRoll = probabilityEntry.MaxRoll;
+        //Some tables have a weird maxroll value which is not considered here
+        mainEntry.MaxRoll = probabilityEntry.MaxRoll <= 5 ? 0 : probabilityEntry.MaxRoll;
 
         let itemIndex = 0;
         while(probabilityEntry["Item" + ++itemIndex]) {
@@ -213,15 +215,17 @@ export class LootParser {
                 //Probability is not a probability, but a value for the condition
                 //See #parseConditions()
                 item.Probability = 0;
+                let next = Number.parseInt(probabilityEntry["Item" + (itemIndex + 1)]);
+                let range: NumberRange = {Low: probability, High: next ? next - 1 : Number.MAX_SAFE_INTEGER};
                 switch (conditions.probabilityType) {
                     case ConditionNames.Level:
-                        item.Conditions.Levels.Character = {Low: probability, High: Number.MAX_SAFE_INTEGER};
+                        item.Conditions.Levels.Character = range;
                         break;
                     case ConditionNames.EnemyLevel:
-                        item.Conditions.Levels.Enemy = {Low: probability, High: Number.MAX_SAFE_INTEGER};
+                        item.Conditions.Levels.Enemy = range;
                         break;
                     case ConditionNames.MinPOIContLevel:
-                        item.Conditions.Levels.Content = {Low: probability, High: Number.MAX_SAFE_INTEGER};
+                        item.Conditions.Levels.Content = range;
                         break;
                 }
             } else {
@@ -258,7 +262,7 @@ export class LootParser {
                 GearScore: this.#parseRange(rawEntry["GearScoreRange" + itemIndex]),
                 PerkBucketOverrides: rawEntry["PerkBucketOverrides" + itemIndex],
                 PerkOverrides: rawEntry["PerkOverrides" + itemIndex],
-                Conditions: conditions
+                Conditions: clone(conditions)
             });
         }
 
