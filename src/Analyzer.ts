@@ -146,7 +146,6 @@ export class Analyzer {
                 this.#dereferenceItem(table.Items, item, lootTable);
             }
             table.Items = table.Items.filter(item => this.#filterByContext(item, context));
-            this.#adaptMultiProbabilities(table);
         }
         return analyzedTables;
     }
@@ -162,6 +161,7 @@ export class Analyzer {
      * @param fromNamed Called from a named item. Used in recursion only.
      */
     #dereferenceItem(items: AnalyzedLootItem[], item: LootTableItem, lootTable: LootTable, baseQuantity: NumberRange | number = 1, baseProbability: number = 1, fromNamed: boolean = false) {
+        let currentItems: AnalyzedLootItem[] = [];
         //Calculate base item probabilities
         let itemProbability = baseProbability * this.#calculateItemProbability(lootTable.MaxRoll, item.Probability);
         let itemQuantity = this.#multiplyRange(item.Quantity, baseQuantity);
@@ -173,7 +173,7 @@ export class Analyzer {
                 console.warn(`Loot table ${lootTable.LootTableID} has unknown reference ${item.Name}`);
             } else {
                 for (let referencedItem of referencedTable.Items) {
-                    this.#dereferenceItem(items, referencedItem, referencedTable, itemQuantity, itemProbability, fromNamed);
+                    this.#dereferenceItem(currentItems, referencedItem, referencedTable, itemQuantity, itemProbability, fromNamed);
                 }
                 crossReferenceResolved = true;
             }
@@ -184,7 +184,7 @@ export class Analyzer {
             } else {
                 if (this.#resolveLootBucketThreshhold !== undefined && this.#resolveLootBucketThreshhold >= referencedBucket.Items.length) {
                     for (let referencedItem of referencedBucket.Items) {
-                        items.push({
+                        currentItems.push({
                             Name: referencedItem.Name,
                             //If the bucket is MatchOne, then probability for each item is the same (selection depends on tags)
                             //Otherwise it can be any one of the items, and the probability is reduced accordingly
@@ -198,9 +198,9 @@ export class Analyzer {
                         });
                     }
                 } else {
-                    items.push({
+                    currentItems.push({
                         Name: 'Pick from loot bucket: ' + referencedBucket.Name,
-                        Probability: itemProbability,
+                        Probability: lootTable.AndOr === "AND" ? itemProbability : itemProbability / lootTable.Items.length,
                         Quantity: itemQuantity,
                         GearScore: item.GearScore,
                         PerkBucketOverrides: item.PerkBucketOverrides,
@@ -214,7 +214,7 @@ export class Analyzer {
 
         if (!crossReferenceResolved) {
             //Normal item or invalid reference
-            items.push({
+            currentItems.push({
                 Name: item.Name,
                 Probability: itemProbability,
                 Quantity: item.Quantity,
@@ -224,6 +224,9 @@ export class Analyzer {
                 Conditions: item.Conditions
             });
         }
+
+        this.#adaptMultiProbabilities(currentItems);
+        items.push(...currentItems);
     }
 
      /**
@@ -304,13 +307,11 @@ export class Analyzer {
      * @param table Analyzed loot table.
      * @param conditions Conditions of the table.
      */
-    #adaptMultiProbabilities(table: AnalyzedLootTable) {
-        if (!table.Multiple) {
-            //Only one of the possible items can be selected
-            let possibleItemCount = table.Items.filter(item => item.Probability > 0).length;
-            for (let item of table.Items) {
-                item.Probability /= possibleItemCount;
-            }
+    #adaptMultiProbabilities(items: AnalyzedLootItem[]) {
+        //Only one of the possible items can be selected
+        let possibleItemCount = items.filter(item => item.Probability > 0).length;
+        for (let item of items) {
+            item.Probability /= possibleItemCount;
         }
     }
 
