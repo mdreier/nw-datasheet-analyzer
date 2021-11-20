@@ -225,7 +225,9 @@ export class Analyzer {
             });
         }
 
-        this.#adaptMultiProbabilities(currentItems);
+        if (lootTable.AndOr === "OR") {
+            this.#adaptMultiProbabilities(currentItems);
+        }
         items.push(...currentItems);
     }
 
