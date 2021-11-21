@@ -1,4 +1,5 @@
 import { AnalyzedLootItem, AnalyzedLootTable, Loot, LootBucket, LootBucketItem, LootTable, LootTableItem, NumberRange } from "./Loot";
+import clone from 'just-clone';
 
 interface LootTableLookup {
     [lootTableId: string]: LootTable;
@@ -84,12 +85,20 @@ export class Analyzer {
     #resolveLootBucketThreshhold: number;
 
     /**
+     * The context set up for this analyzer.
+     */
+    #context: ProbabilityContext;
+
+    /**
      * Create a new instance for analysis of data tables.
+     * @param context The context for analyzing loot. Thhis object is copied, subsequent changes
+     * will not influence this analyzer instance.
      * @param dataTables Data tables to be analyzed.
      * @param resolveLootBucketThreshhold Threshhold to resolve loot bucket references in loot table entries. Loot buckets with a number 
      * of items larger than this threshhold are not resolved.
      */
-    constructor(dataTables: Loot, resolveLootBucketThreshhold: number) {
+    constructor(dataTables: Loot, context: ProbabilityContext, resolveLootBucketThreshhold: number) {
+        this.#context = clone(context);
         this.#dataTables = dataTables;
         this.#resolveLootBucketThreshhold = resolveLootBucketThreshhold;
     }
@@ -97,10 +106,10 @@ export class Analyzer {
     /**
      * Analyze the data tables.
      */
-    analyze(context?: ProbabilityContext): AnalyzedLootTable[] {
+    analyze(): AnalyzedLootTable[] {
         //TODO: Consider luck bonuses
         this.#buildLookupTables();
-        return this.#analyzeLootTables(context || {});
+        return this.#analyzeLootTables();
     }
 
     /**
@@ -128,7 +137,7 @@ export class Analyzer {
      * Analyze the loot tables.
      * @returns Analyzed tables.
      */
-    #analyzeLootTables(context: ProbabilityContext): AnalyzedLootTable[] {
+    #analyzeLootTables(): AnalyzedLootTable[] {
         let analyzedTables = [] as AnalyzedLootTable[];
         for (let lootTable of this.#dataTables.lootTables) {
             let table: AnalyzedLootTable = {
@@ -145,7 +154,7 @@ export class Analyzer {
             for (let item of lootTable.Items) {
                 this.#dereferenceItem(table.Items, item, lootTable);
             }
-            table.Items = table.Items.filter(item => this.#filterByContext(item, context));
+            table.Items = table.Items.filter(item => this.#filterByContext(item));
         }
         return analyzedTables;
     }
@@ -234,27 +243,26 @@ export class Analyzer {
      /**
      * Filter items in the loot table according to the given context.
      * @param table Loot table, item list will be modified.
-     * @param context The context for evaluating conditions.
      */
-    #filterByContext(item: AnalyzedLootItem, context: ProbabilityContext): boolean {
-        if (this.#conditionFailed(context.Enemy?.Elite, item.Conditions.Elite)) {
+    #filterByContext(item: AnalyzedLootItem): boolean {
+        if (this.#conditionFailed(this.#context.Enemy?.Elite, item.Conditions.Elite)) {
             return false;
         }
-        if (this.#conditionFailed(context.Salt, item.Conditions.Fishing?.Salt)) {
+        if (this.#conditionFailed(this.#context.Salt, item.Conditions.Fishing?.Salt)) {
             return false;
         }
-        if (this.#conditionFailed(context.CharacterLevel, item.Conditions.Levels.Character)) {
+        if (this.#conditionFailed(this.#context.CharacterLevel, item.Conditions.Levels.Character)) {
             return false;
         }
-        if (this.#conditionFailed(context.Location?.Level, item.Conditions.Levels.Content)) {
+        if (this.#conditionFailed(this.#context.Location?.Level, item.Conditions.Levels.Content)) {
             return false;
         }
-        if (this.#conditionFailed(context.Enemy?.Level, item.Conditions.Levels.Enemy)) {
+        if (this.#conditionFailed(this.#context.Enemy?.Level, item.Conditions.Levels.Enemy)) {
             return false;
         }
         //Evaluate named condition if either location or enemy information are set
-        let matchedNames = [context.Enemy?.Name, context.Enemy?.Type, context.Location?.Name, context.Location?.Type].filter(item => item !== undefined);
-        if (context.Enemy !== undefined || context.Location !== undefined) {
+        let matchedNames = [this.#context.Enemy?.Name, this.#context.Enemy?.Type, this.#context.Location?.Name, this.#context.Location?.Type].filter(item => item !== undefined);
+        if (this.#context.Enemy !== undefined || this.#context.Location !== undefined) {
             for (let name of item.Conditions.Named) {
                 let index = matchedNames.indexOf(name);
                 if (index >= 0) {
