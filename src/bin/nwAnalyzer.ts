@@ -32,8 +32,8 @@ if (endProcessing || commandLine["no-analysis"]) {
     process.exit(0);
 }
 
-let analyzer = new Analyzer(dataTables, 1);
-let analyzedTables = analyzer.analyze();
+let analyzer = new Analyzer(dataTables);
+let analyzedTables = analyzer.analyze(commandLine.table);
 
 if (commandLine.query) {
     analyzedTables = JSONPath({

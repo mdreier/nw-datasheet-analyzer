@@ -17,6 +17,8 @@
   "author": "Martin Dreier",
   "license": "Apache-2.0",
   "devDependencies": {
+    "@types/command-line-args": "^5.2.0",
+    "@types/command-line-usage": "^5.0.2",
     "@types/just-clone": "^3.2.2",
     "@types/node": "^16.11.7",
     "ts": "^0.2.2",

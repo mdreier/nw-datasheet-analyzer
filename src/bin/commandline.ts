@@ -1,4 +1,4 @@
-import commandLineUsage from 'command-line-usage';
+import commandLineUsage, {OptionDefinition} from 'command-line-usage';
 
 interface CommandLine {
     forceDownload: boolean,
@@ -8,10 +8,11 @@ interface CommandLine {
     output: string,
     query: string,
     parsedQuery: string,
-    "no-analysis": boolean
+    "no-analysis": boolean,
+    table: string[]
 }
 
-const commandLineDefinition = [
+const commandLineDefinition: OptionDefinition[] = [
     { 
         name: 'forceDownload', 
         alias: 'f', 
@@ -29,6 +30,13 @@ const commandLineDefinition = [
         alias: 'd',
         type: String,
         description: 'Data directory'
+    },
+    {
+        name: 'table',
+        alias: 't',
+        type: String,
+        description: 'Table to analyze. Can be specified multiple times',
+        multiple: true
     },
     {
         name: 'parsedQuery',

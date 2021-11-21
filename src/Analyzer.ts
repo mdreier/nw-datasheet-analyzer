@@ -97,19 +97,32 @@ export class Analyzer {
      * @param resolveLootBucketThreshhold Threshhold to resolve loot bucket references in loot table entries. Loot buckets with a number 
      * of items larger than this threshhold are not resolved.
      */
-    constructor(dataTables: Loot, context: ProbabilityContext, resolveLootBucketThreshhold: number) {
-        this.#context = clone(context);
+    constructor(dataTables: Loot, context?: ProbabilityContext, resolveLootBucketThreshhold: number = 1) {
+        if (context) {
+            this.#context = clone(context);
+        } else {
+            this.#context = {};
+        }
         this.#dataTables = dataTables;
         this.#resolveLootBucketThreshhold = resolveLootBucketThreshhold;
     }
 
     /**
      * Analyze the data tables.
+     * @param tables Table or tables to analyze.
      */
-    analyze(): AnalyzedLootTable[] {
+    analyze(tables?: string|string[]): AnalyzedLootTable[] {
         //TODO: Consider luck bonuses
         this.#buildLookupTables();
-        return this.#analyzeLootTables();
+
+        let tablesToAnalyze: string[] = [];
+        if (typeof tables === 'string') {
+            tablesToAnalyze.push(tables);
+        } else if (Array.isArray(tables)) {
+            tablesToAnalyze.push(...tables);
+        }
+
+        return this.#analyzeLootTables(tablesToAnalyze);
     }
 
     /**
@@ -135,11 +148,15 @@ export class Analyzer {
 
     /**
      * Analyze the loot tables.
+     * @param tables Table or tables to analyze. Empty to analyze all tables.
      * @returns Analyzed tables.
      */
-    #analyzeLootTables(): AnalyzedLootTable[] {
+    #analyzeLootTables(tables: string[]): AnalyzedLootTable[] {
         let analyzedTables = [] as AnalyzedLootTable[];
         for (let lootTable of this.#dataTables.lootTables) {
+            if (tables.length > 0 && tables.indexOf(lootTable.LootTableID) < 0) {
+                continue;
+            }
             let table: AnalyzedLootTable = {
                 Id: lootTable.LootTableID,
                 GearScoreBonus: lootTable.GearScoreBonus,
