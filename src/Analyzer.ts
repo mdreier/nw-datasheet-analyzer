@@ -243,7 +243,7 @@ export class Analyzer {
             currentItems.push({
                 Name: item.Name,
                 Probability: itemProbability,
-                Quantity: item.Quantity,
+                Quantity: itemQuantity,
                 GearScore: item.GearScore,
                 PerkBucketOverrides: item.PerkBucketOverrides,
                 PerkOverrides: item.PerkOverrides,
