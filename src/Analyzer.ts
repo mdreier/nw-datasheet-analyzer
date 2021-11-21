@@ -1,5 +1,6 @@
 import { AnalyzedLootItem, AnalyzedLootTable, Loot, LootBucket, LootBucketItem, LootTable, LootTableItem, NumberRange } from "./Loot";
 import clone from 'just-clone';
+import { Conditions } from ".";
 
 interface LootTableLookup {
     [lootTableId: string]: LootTable;
@@ -59,6 +60,33 @@ interface ProbabilityContext {
 }
 
 /**
+ * Internal: Item lookup table.
+ */
+interface ItemLookup {
+    [itemName: string]: AnalyzedLootItem[];
+}
+
+/**
+ * Options for the analyzer.
+ */
+interface AnalyzerOptions {
+    /**
+     * Force the merging of items, even when filters are not set.
+     * 
+     * Default: `false`.
+     */
+    forceMerging: boolean,
+
+    /**
+     * Threshhold to resolve loot bucket references in loot table entries. Loot buckets with a number 
+     * of items larger than this threshhold are not resolved.
+     * 
+     * Default: `1`.
+     */
+    resolveLootBucketThreshhold: number
+}
+
+/**
  * Analysis tool for data files.
  */
 export class Analyzer {
@@ -79,32 +107,33 @@ export class Analyzer {
     #lootBuckets: LootBucketLookup;
 
     /**
-     * Threshhold to resolve loot bucket references in loot table entries. Loot buckets with a number 
-     * of items larger than this threshhold are not resolved.
-     */
-    #resolveLootBucketThreshhold: number;
-
-    /**
      * The context set up for this analyzer.
      */
     #context: ProbabilityContext;
+
+    /**
+     * Configuration of the analyzer.
+     */
+    #options: AnalyzerOptions;
 
     /**
      * Create a new instance for analysis of data tables.
      * @param context The context for analyzing loot. Thhis object is copied, subsequent changes
      * will not influence this analyzer instance.
      * @param dataTables Data tables to be analyzed.
-     * @param resolveLootBucketThreshhold Threshhold to resolve loot bucket references in loot table entries. Loot buckets with a number 
-     * of items larger than this threshhold are not resolved.
+     * @param resolveLootBucketThreshhold 
      */
-    constructor(dataTables: Loot, context?: ProbabilityContext, resolveLootBucketThreshhold: number = 1) {
+    constructor(dataTables: Loot, context?: ProbabilityContext, options?: AnalyzerOptions) {
         if (context) {
             this.#context = clone(context);
         } else {
             this.#context = {};
         }
         this.#dataTables = dataTables;
-        this.#resolveLootBucketThreshhold = resolveLootBucketThreshhold;
+        this.#options = {
+            forceMerging: options?.forceMerging === true ? true : false,
+            resolveLootBucketThreshhold: options.resolveLootBucketThreshhold === undefined ? 1 : options.resolveLootBucketThreshhold
+        }
     }
 
     /**
@@ -172,6 +201,7 @@ export class Analyzer {
                 this.#dereferenceItem(table.Items, item, lootTable);
             }
             table.Items = table.Items.filter(item => this.#filterByContext(item));
+            this.#mergeItems(table.Items);
         }
         return analyzedTables;
     }
@@ -208,7 +238,7 @@ export class Analyzer {
             if (!referencedBucket) {
                 console.warn(`Loot table ${lootTable.LootTableID} has unknown reference ${item.Name}`);
             } else {
-                if (this.#resolveLootBucketThreshhold !== undefined && this.#resolveLootBucketThreshhold >= referencedBucket.Items.length) {
+                if (this.#options.resolveLootBucketThreshhold !== undefined && this.#options.resolveLootBucketThreshhold >= referencedBucket.Items.length) {
                     for (let referencedItem of referencedBucket.Items) {
                         currentItems.push({
                             Name: referencedItem.Name,
@@ -360,5 +390,102 @@ export class Analyzer {
                 High: baseRange.High * multiplier.High
             }
         }
+    }
+
+    /**
+     * Merge multiple instance of the same item in an item list.
+     * @param items Item list to compress.
+     */
+    #mergeItems(items: AnalyzedLootItem[]) {
+        let lookup: ItemLookup = {};
+        for (let item of items) {
+            if (!lookup[item.Name]) {
+                //First time this item is encountered
+                lookup[item.Name] = [item];
+            } else {
+                for (let match of lookup[item.Name]) {
+                    //TODO: Implement merging if context is not set,
+                    //then conditions must match!
+                    if (this.#options.forceMerging || this.#hasContext()) {
+                        //Filters already applied, merge independent of conditions
+                        this.#mergeItem(item, match);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Merge a source item into a target item..
+     * @param source Source item.
+     * @param target Target item, will be modified.
+     */
+    #mergeItem(source: AnalyzedLootItem, target: AnalyzedLootItem) {
+        target.GearScore = this.#mergeRange(source.GearScore, target.GearScore);
+        target.PerkBucketOverrides += source.PerkBucketOverrides;
+        target.PerkOverrides += source.PerkOverrides;
+        target.Quantity = this.#mergeRange(source.Quantity, target.Quantity);
+        target.Probability += source.Probability;
+        this.#mergeConditions(source.Conditions, target.Conditions);
+    }
+
+    /**
+     * Merge source conditions into target conditions.
+     * @param source Source conditions to merge.
+     * @param target Target conditions, will be modified.
+     */
+    #mergeConditions(source: Conditions, target: Conditions) {
+        //General logic: if source and target define different options,
+        // the merged condition is "either one", i.e. undefined
+        if (source.Elite !== target.Elite) {
+            target.Elite = undefined;
+        }
+        if (target.Fishing?.Salt !== source.Fishing?.Salt) {
+            target.Fishing = {
+                Salt: undefined
+            }
+        }
+        if (source.GlobalMod !== target.GlobalMod) {
+            target.GlobalMod = undefined;
+        }
+        target.Levels = {
+            Character: this.#mergeRange(source.Levels.Character, target.Levels.Character),
+            Content: this.#mergeRange(source.Levels.Content, target.Levels.Content),
+            Enemy: this.#mergeRange(source.Levels.Enemy, target.Levels.Enemy)
+        }
+        //Combine all named conditions
+        target.Named.push(...source.Named);
+    }
+
+    /**
+     * Merge two number ranges. Low will be the minimum of the lows, high will be
+     * the maximum of the highs. If either range is `undefined`, it will return `undefined`.
+     * @param range1 First range.
+     * @param range2 Second range.
+     * @returns Merged range.
+     */
+    #mergeRange(range1: NumberRange, range2: NumberRange) {
+        if (range1 && range2) {
+            return {
+                Low: Math.min(range1.Low, range2.Low),
+                High: Math.max(range1.High, range2.High)
+            }
+        } else {
+            //Only merge if both ranges are given. If one of them is not set,
+            // combined range us unbounded.
+            return undefined;
+        }
+    }
+
+    /**
+     * Check if a context has been provided for this analyzer instance.
+     * @returns `true` if the context is set, `false` if the context is empty.
+     */
+    #hasContext(): boolean {
+        return Boolean(this.#context.CharacterLevel 
+        || this.#context.Enemy 
+        || this.#context.Location
+        || this.#context.Salt);
     }
 }
